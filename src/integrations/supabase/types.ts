@@ -14,16 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      post_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_interactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          pinned: boolean
+          subject: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          pinned?: boolean
+          subject: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          pinned?: boolean
+          subject?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          batch: string | null
+          blood_group: string | null
+          created_at: string
+          department: string
+          district: string | null
+          facebook_link: string | null
+          gender: string | null
+          id: string
+          name: string
+          nickname: string | null
+          profile_photo: string | null
+          registration_number: string | null
+          roll: string
+          session: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          batch?: string | null
+          blood_group?: string | null
+          created_at?: string
+          department?: string
+          district?: string | null
+          facebook_link?: string | null
+          gender?: string | null
+          id: string
+          name: string
+          nickname?: string | null
+          profile_photo?: string | null
+          registration_number?: string | null
+          roll: string
+          session?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          batch?: string | null
+          blood_group?: string | null
+          created_at?: string
+          department?: string
+          district?: string | null
+          facebook_link?: string | null
+          gender?: string | null
+          id?: string
+          name?: string
+          nickname?: string | null
+          profile_photo?: string | null
+          registration_number?: string | null
+          roll?: string
+          session?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          content: Json
+          id: number
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          id?: number
+          theme?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          id?: number
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "cr" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +322,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "cr", "student"],
+    },
   },
 } as const
