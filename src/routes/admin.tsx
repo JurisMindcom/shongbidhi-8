@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminCreateStudent, adminDeleteStudent } from "@/lib/admin.functions";
 import { toast } from "sonner";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { LogOut, Trash2, UserPlus, Palette, ArrowLeft } from "lucide-react";
+import { LogOut, Trash2, UserPlus, Palette, ArrowLeft, Upload, X } from "lucide-react";
 import type { Profile } from "@/lib/auth";
 
 export const Route = createFileRoute("/admin")({ component: AdminPage });
@@ -35,6 +35,35 @@ function AdminPage() {
     blood_group: "", district: "", gender: "", facebook_link: "", profile_photo: "",
     role: "student" as "student" | "cr" | "admin",
   });
+  const [uploading, setUploading] = useState(false);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `students/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      setForm((f) => ({ ...f, profile_photo: data.publicUrl }));
+      toast.success("Photo uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +116,30 @@ function AdminPage() {
         <section className="glass rounded-2xl p-5">
           <h2 className="mb-3 flex items-center gap-2 text-lg font-bold"><UserPlus className="h-4 w-4" /> Add Student</h2>
           <form onSubmit={submit} className="grid gap-2 sm:grid-cols-2">
+            {/* Photo upload */}
+            <div className="sm:col-span-2 flex items-center gap-4 rounded-lg bg-muted/30 p-3">
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-muted/60 ring-2 ring-primary/30">
+                {form.profile_photo ? (
+                  <img src={form.profile_photo} alt="Preview" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-xs text-foreground/50">No photo</div>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary/90 px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary">
+                  <Upload className="h-3.5 w-3.5" />
+                  {uploading ? "Uploading…" : form.profile_photo ? "Change Photo" : "Upload Photo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+                </label>
+                {form.profile_photo && (
+                  <button type="button" onClick={() => setForm({ ...form, profile_photo: "" })}
+                    className="ml-2 inline-flex items-center gap-1 rounded-lg bg-destructive/70 px-3 py-2 text-xs font-semibold text-destructive-foreground">
+                    <X className="h-3.5 w-3.5" /> Remove
+                  </button>
+                )}
+                <p className="text-[11px] text-foreground/60">JPG/PNG, up to 5MB. Or paste a URL below.</p>
+              </div>
+            </div>
             {([
               ["name", "Full Name *", true],
               ["roll", "Roll Number *", true],
