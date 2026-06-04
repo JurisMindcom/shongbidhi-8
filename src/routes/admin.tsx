@@ -24,15 +24,17 @@ type FormState = {
   name: string; roll: string; password: string;
   registration_number: string; session: string; batch: string;
   blood_group: string; district: string; gender: "" | "Male" | "Female";
-  facebook_link: string; profile_photo: string;
+  facebook_link: string; profile_photo: string; phone: string;
   role: "student" | "cr" | "admin";
 };
 
 const emptyForm: FormState = {
   name: "", roll: "", password: "", registration_number: "", session: "", batch: "",
-  blood_group: "", district: "", gender: "", facebook_link: "", profile_photo: "",
+  blood_group: "", district: "", gender: "", facebook_link: "", profile_photo: "", phone: "",
   role: "student",
 };
+
+const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
 function AdminPage() {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -215,8 +217,8 @@ function AdminPage() {
               ["registration_number", "Registration", false],
               ["session", "Session", false],
               ["batch", "Batch", false],
-              ["blood_group", "Blood Group", false],
               ["district", "District", false],
+              ["phone", "Phone", false],
               ["facebook_link", "Facebook URL", false],
               ["profile_photo", "Profile photo URL", false],
             ] as const).map(([k, p, req]) => (
@@ -225,6 +227,14 @@ function AdminPage() {
                 onChange={(e) => setForm({ ...form, [k]: e.target.value })}
                 className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
             ))}
+            <select
+              value={form.blood_group}
+              onChange={(e) => setForm({ ...form, blood_group: e.target.value })}
+              className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
+            >
+              <option value="">Blood Group</option>
+              {BLOOD_GROUPS.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
             <select
               required
               value={form.gender}
