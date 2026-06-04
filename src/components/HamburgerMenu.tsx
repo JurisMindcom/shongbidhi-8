@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Home, LayoutDashboard, Users, BookOpen, Settings, User as UserIcon, Bell, LogOut, Shield } from "lucide-react";
+import { Menu, X, Home, LayoutDashboard, Users, BookOpen, Settings, User as UserIcon, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 type Item = { to: string; label: string; icon: typeof Home; auth?: boolean };
