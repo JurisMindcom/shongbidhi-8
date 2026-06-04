@@ -70,7 +70,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session?.user) loadProfile(data.session.user.id).finally(() => setLoading(false));
       else setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+    // Honor "Remember me": if user opted out, sign out when the tab closes
+    const onUnload = () => {
+      try {
+        if (localStorage.getItem("ll-remember") === "0") {
+          supabase.auth.signOut();
+        }
+      } catch {}
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      sub.subscription.unsubscribe();
+      window.removeEventListener("beforeunload", onUnload);
+    };
   }, []);
 
   const signInWithRoll = async (roll: string, password: string) => {
