@@ -14,6 +14,7 @@ export type Profile = {
   blood_group: string | null;
   district: string | null;
   gender: string | null;
+  phone: string | null;
   facebook_link: string | null;
   profile_photo: string | null;
   status: string;
@@ -21,12 +22,16 @@ export type Profile = {
 
 export type Role = "admin" | "cr" | "student";
 
+export type LoginMode = "admin" | "student";
+
 type AuthCtx = {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   roles: Role[];
   isAdmin: boolean;
+  loginMode: LoginMode;
+  setLoginMode: (m: LoginMode) => void;
   loading: boolean;
   signInWithRoll: (roll: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
@@ -43,6 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loginMode, setLoginModeState] = useState<LoginMode>(() => {
+    if (typeof window === "undefined") return "student";
+    return (localStorage.getItem("ll-login-mode") as LoginMode) || "student";
+  });
+  const setLoginMode = (m: LoginMode) => {
+    setLoginModeState(m);
+    try { localStorage.setItem("ll-login-mode", m); } catch {}
+  };
 
   const loadProfile = async (uid: string) => {
     const [{ data: p }, { data: r }] = await Promise.all([
@@ -109,7 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         roles,
-        isAdmin: roles.includes("admin"),
+        isAdmin: roles.includes("admin") && loginMode === "admin",
+        loginMode,
+        setLoginMode,
         loading,
         signInWithRoll,
         signOut,
