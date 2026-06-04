@@ -4,14 +4,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Home, LayoutDashboard, Users, BookOpen, Settings, User as UserIcon, Bell, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
-const items = [
+type Item = { to: string; label: string; icon: typeof Home; auth?: boolean };
+const items: Item[] = [
   { to: "/", label: "Home", icon: Home },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, auth: true },
   { to: "/students", label: "Students", icon: Users },
   { to: "/notes", label: "Notes", icon: BookOpen, auth: true },
   { to: "/profile", label: "Profile", icon: UserIcon, auth: true },
   { to: "/settings", label: "Settings", icon: Settings, auth: true },
-] as const;
+];
 
 export function HamburgerMenu() {
   const [open, setOpen] = useState(false);
@@ -59,7 +60,7 @@ export function HamburgerMenu() {
                 return (
                   <Link
                     key={it.to}
-                    to={it.to}
+                    to={it.to as "/"}
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/90 transition hover:bg-muted/50"
                     activeProps={{ className: "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold bg-primary/20 text-foreground" }}
                   >
