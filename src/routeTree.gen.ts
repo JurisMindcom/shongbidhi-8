@@ -10,6 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudentsRouteImport } from './routes/students'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as NotesRouteImport } from './routes/notes'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -19,6 +22,21 @@ import { Route as ApiPublicBootstrapRouteImport } from './routes/api/public/boot
 const StudentsRoute = StudentsRouteImport.update({
   id: '/students',
   path: '/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotesRoute = NotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -52,6 +70,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/notes': typeof NotesRoute
+  '/profile': typeof ProfileRoute
+  '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
   '/api/public/bootstrap': typeof ApiPublicBootstrapRoute
 }
@@ -60,6 +81,9 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/notes': typeof NotesRoute
+  '/profile': typeof ProfileRoute
+  '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
   '/api/public/bootstrap': typeof ApiPublicBootstrapRoute
 }
@@ -69,6 +93,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/notes': typeof NotesRoute
+  '/profile': typeof ProfileRoute
+  '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
   '/api/public/bootstrap': typeof ApiPublicBootstrapRoute
 }
@@ -79,6 +106,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
+    | '/notes'
+    | '/profile'
+    | '/settings'
     | '/students'
     | '/api/public/bootstrap'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +117,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
+    | '/notes'
+    | '/profile'
+    | '/settings'
     | '/students'
     | '/api/public/bootstrap'
   id:
@@ -95,6 +128,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
+    | '/notes'
+    | '/profile'
+    | '/settings'
     | '/students'
     | '/api/public/bootstrap'
   fileRoutesById: FileRoutesById
@@ -104,6 +140,9 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  NotesRoute: typeof NotesRoute
+  ProfileRoute: typeof ProfileRoute
+  SettingsRoute: typeof SettingsRoute
   StudentsRoute: typeof StudentsRoute
   ApiPublicBootstrapRoute: typeof ApiPublicBootstrapRoute
 }
@@ -115,6 +154,27 @@ declare module '@tanstack/react-router' {
       path: '/students'
       fullPath: '/students'
       preLoaderRoute: typeof StudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notes': {
+      id: '/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof NotesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -160,6 +220,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  NotesRoute: NotesRoute,
+  ProfileRoute: ProfileRoute,
+  SettingsRoute: SettingsRoute,
   StudentsRoute: StudentsRoute,
   ApiPublicBootstrapRoute: ApiPublicBootstrapRoute,
 }

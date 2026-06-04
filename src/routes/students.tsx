@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/auth";
 import { StudentCard } from "@/components/StudentCard";
 import { FloatingParticles } from "@/components/FloatingParticles";
+import { HamburgerMenu } from "@/components/HamburgerMenu";
 import studentsCover from "@/assets/students-cover.jpg";
 import { ArrowLeft, Search } from "lucide-react";
 
@@ -91,8 +92,9 @@ function StudentsPage() {
   return (
     <div className="relative min-h-screen bg-background pb-16">
       <FloatingParticles count={14} />
+      <HamburgerMenu />
       <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
+        <Link to="/" className="ml-12 flex items-center gap-2 text-sm font-semibold">
           <ArrowLeft className="h-4 w-4" /> Home
         </Link>
         <span className="text-xs text-foreground/70">{filtered.length} students</span>

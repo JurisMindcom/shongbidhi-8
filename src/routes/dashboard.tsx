@@ -1,13 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { Plus, Heart, Download, Eye, LogOut, Home, Upload, User as UserIcon, Settings, Users, BookOpen, Shield } from "lucide-react";
+import { HamburgerMenu } from "@/components/HamburgerMenu";
+import { displayRole } from "@/components/StudentCard";
+import { Heart, Download, Eye, Image as ImageIcon, FileText, X, Send, Crown, Paperclip, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/dashboard")({ component: Dashboard });
+export const Route = createFileRoute("/dashboard")({
+  head: () => ({ meta: [{ title: "Dashboard" }] }),
+  component: Dashboard,
+});
 
 type Post = {
   id: string;
@@ -17,280 +22,317 @@ type Post = {
   description: string | null;
   file_url: string | null;
   file_type: string | null;
+  media_urls: { url: string; type: string; name: string }[] | null;
   created_at: string;
 };
 
+type Author = { id: string; name: string; profile_photo: string | null; roll: string };
+
 function Dashboard() {
-  const { user, profile, loading, signOut, isAdmin } = useAuth();
+  const { user, profile, loading } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"home" | "profile" | "uploads" | "settings">("home");
   const [posts, setPosts] = useState<Post[]>([]);
-  const [showUpload, setShowUpload] = useState(false);
-  const [stats, setStats] = useState({ students: 0, posts: 0, myPosts: 0 });
+  const [authors, setAuthors] = useState<Record<string, Author>>({});
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/login" });
   }, [loading, user, nav]);
 
   const loadPosts = async () => {
-    const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false });
-    setPosts((data as Post[]) ?? []);
+    const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
+    const list = (data as Post[]) ?? [];
+    setPosts(list);
+    const ids = Array.from(new Set(list.map((p) => p.user_id)));
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id,name,profile_photo,roll").in("id", ids);
+      const map: Record<string, Author> = {};
+      (profs ?? []).forEach((p) => (map[(p as Author).id] = p as Author));
+      setAuthors(map);
+    }
   };
-  useEffect(() => { loadPosts(); }, []);
 
   useEffect(() => {
-    if (!user) return;
-    const load = async () => {
-      const [{ count: s }, { count: p }, { count: m }] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("posts").select("id", { count: "exact", head: true }),
-        supabase.from("posts").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-      ]);
-      setStats({ students: s ?? 0, posts: p ?? 0, myPosts: m ?? 0 });
-    };
-    load();
+    loadPosts();
     const ch = supabase
-      .channel("dashboard-stats")
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, load)
+      .channel("posts-feed")
+      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => loadPosts())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user]);
+  }, []);
 
   if (!user || !profile) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
 
-  const myPosts = posts.filter((p) => p.user_id === user.id);
+  const role = displayRole(profile);
+  const isFounder = role === "Founder";
 
   return (
-    <div className="relative min-h-screen bg-background pb-24">
-      <FloatingParticles count={12} />
-      <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 py-3">
-        <div>
-          <div className="text-xs text-foreground/60">Welcome,</div>
-          <div className="text-sm font-bold">{profile.name}</div>
-        </div>
-        <div className="flex gap-2">
-          {isAdmin && (
-            <Link to="/admin" className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">
-              <Shield className="inline h-3 w-3" /> Admin
-            </Link>
-          )}
-          <button onClick={() => signOut()} className="rounded-full bg-primary/80 px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-            <LogOut className="inline h-3.5 w-3.5" />
-          </button>
-        </div>
-      </header>
+    <div className="relative min-h-screen bg-background pb-20">
+      <FloatingParticles count={8} />
+      <HamburgerMenu />
 
-      <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-        {tab === "home" && (
-          <>
-            <div className="grid grid-cols-3 gap-2">
-              <StatCard icon={Users} label="Students" value={stats.students} />
-              <StatCard icon={BookOpen} label="Resources" value={stats.posts} />
-              <StatCard icon={Upload} label="My Uploads" value={stats.myPosts} />
+      {/* Profile header */}
+      <section className="mx-auto max-w-2xl px-4 pt-16">
+        <Link to="/profile" className="glass flex items-center gap-3 rounded-2xl p-4 transition hover:bg-muted/30">
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-primary/40">
+            {profile.profile_photo ? (
+              <img src={profile.profile_photo} alt={profile.name} className="h-full w-full object-cover" loading="eager" />
+            ) : (
+              <div className="grid h-full w-full place-items-center text-2xl font-bold text-secondary">{profile.name[0]}</div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <div className="truncate text-base font-bold">{profile.name}</div>
+              <span className={"inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold " + (isFounder ? "bg-amber-400/90 text-amber-950" : "bg-secondary/80 text-secondary-foreground")}>
+                {isFounder && <Crown className="h-3 w-3" />} {role}
+              </span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Link to="/students" className="glass flex items-center gap-2 rounded-2xl p-4 text-sm font-semibold transition hover:bg-muted/40">
-                <Users className="h-4 w-4 text-secondary" /> Browse Students
-              </Link>
-              <button onClick={() => setShowUpload(true)} className="glass flex items-center gap-2 rounded-2xl p-4 text-sm font-semibold transition hover:bg-muted/40">
-                <Upload className="h-4 w-4 text-secondary" /> Share Notes
-              </button>
+            <div className="mt-0.5 flex items-center gap-3 text-xs text-foreground/70">
+              <span>Roll: <b className="text-foreground">{profile.roll}</b></span>
+              {profile.blood_group && <span>Blood: <b className="text-foreground">{profile.blood_group}</b></span>}
             </div>
-            <h1 className="text-2xl font-bold">Books &amp; <span className="text-gradient">Notes</span></h1>
-            {posts.length === 0 ? (
-              <div className="glass rounded-2xl p-8 text-center text-foreground/70">No uploads yet. Be the first to share!</div>
-            ) : posts.map((p) => <PostCard key={p.id} post={p} userId={user.id} onChange={loadPosts} />)}
-          </>
+          </div>
+        </Link>
+      </section>
+
+      {/* Composer */}
+      <section className="mx-auto mt-4 max-w-2xl px-4">
+        <PostComposer onPosted={loadPosts} />
+      </section>
+
+      {/* Feed */}
+      <section className="mx-auto mt-4 max-w-2xl space-y-3 px-4">
+        {posts.length === 0 ? (
+          <div className="glass rounded-2xl p-10 text-center text-foreground/60">No posts yet. Share the first one!</div>
+        ) : (
+          posts.map((p) => <PostCard key={p.id} post={p} userId={user.id} author={authors[p.user_id]} onChange={loadPosts} />)
         )}
-        {tab === "profile" && <ProfileView />}
-        {tab === "uploads" && (
-          <>
-            <h1 className="text-2xl font-bold">My <span className="text-gradient">Uploads</span></h1>
-            {myPosts.length === 0 ? (
-              <div className="glass rounded-2xl p-8 text-center text-foreground/70">You haven't shared anything yet.</div>
-            ) : myPosts.map((p) => <PostCard key={p.id} post={p} userId={user.id} onChange={loadPosts} />)}
-          </>
-        )}
-        {tab === "settings" && <SettingsView />}
-      </main>
-
-      <button
-        onClick={() => setShowUpload(true)}
-        className="fixed bottom-24 right-6 z-40 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground"
-        style={{ boxShadow: "0 0 40px var(--glow)" }}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
-
-      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onDone={loadPosts} />}
-
-      <nav className="glass fixed bottom-3 left-1/2 z-30 flex -translate-x-1/2 gap-1 rounded-full p-1.5">
-        {[
-          { k: "home", icon: Home },
-          { k: "profile", icon: UserIcon },
-          { k: "uploads", icon: Upload },
-          { k: "settings", icon: Settings },
-        ].map((t) => (
-          <button
-            key={t.k}
-            onClick={() => setTab(t.k as typeof tab)}
-            className={`grid h-10 w-10 place-items-center rounded-full transition ${
-              tab === t.k ? "bg-primary text-primary-foreground" : "text-foreground/60"
-            }`}
-          >
-            <t.icon className="h-4 w-4" />
-          </button>
-        ))}
-      </nav>
+      </section>
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number }) {
+function PostComposer({ onPosted }: { onPosted: () => void }) {
+  const { user, profile } = useAuth();
+  const [text, setText] = useState("");
+  const [subject, setSubject] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLInputElement>(null);
+
+  const addFiles = (list: FileList | null) => {
+    if (!list) return;
+    const arr = Array.from(list).filter((f) => f.size <= 20 * 1024 * 1024);
+    setFiles((prev) => [...prev, ...arr].slice(0, 10));
+    setOpen(true);
+  };
+
+  const submit = async () => {
+    if (!user) return;
+    if (!text.trim() && files.length === 0) return toast.error("Add text or a file");
+    setBusy(true);
+    const media: { url: string; type: string; name: string }[] = [];
+    for (const f of files) {
+      const path = `${user.id}/${Date.now()}-${f.name}`;
+      const { error } = await supabase.storage.from("uploads").upload(path, f);
+      if (error) { toast.error(error.message); continue; }
+      const { data } = supabase.storage.from("uploads").getPublicUrl(path);
+      media.push({ url: data.publicUrl, type: f.type || "application/octet-stream", name: f.name });
+    }
+    const first = media[0];
+    const { error } = await supabase.from("posts").insert({
+      user_id: user.id,
+      subject: subject.trim() || "General",
+      title: (text.trim() || files[0]?.name || "Shared post").slice(0, 140),
+      description: text.trim() || null,
+      file_url: first?.url ?? null,
+      file_type: first?.type ?? null,
+      media_urls: media as never,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    setText(""); setSubject(""); setFiles([]); setOpen(false);
+    toast.success("Posted");
+    onPosted();
+  };
+
+  if (!profile) return null;
+
   return (
     <div className="glass rounded-2xl p-3">
-      <div className="flex items-center gap-2 text-xs text-foreground/60">
-        <Icon className="h-3.5 w-3.5 text-secondary" /> {label}
+      <div className="flex items-center gap-2">
+        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+          {profile.profile_photo ? <img src={profile.profile_photo} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-sm font-bold text-secondary">{profile.name[0]}</div>}
+        </div>
+        <button onClick={() => setOpen(true)} className="flex-1 rounded-full bg-muted/40 px-4 py-2 text-left text-sm text-foreground/60">
+          Share a note, file, or photo…
+        </button>
       </div>
-      <div className="mt-1 text-2xl font-bold">{value}</div>
+      {open && (
+        <div className="mt-3 space-y-2">
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Subject (optional)"
+            className="w-full rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
+          />
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="What do you want to share?"
+            rows={3}
+            className="w-full resize-none rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
+          />
+          {files.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {files.map((f, i) => (
+                <div key={i} className="relative aspect-square overflow-hidden rounded-lg bg-muted/40">
+                  {f.type.startsWith("image/") ? (
+                    <img src={URL.createObjectURL(f)} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center">
+                      <FileText className="h-6 w-6 text-secondary" />
+                      <div className="line-clamp-2 text-[10px] text-foreground/70">{f.name}</div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}
+                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <input ref={ref} hidden type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.zip,.ppt,.pptx,.xls,.xlsx" onChange={(e) => addFiles(e.target.files)} />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-1">
+              <button onClick={() => ref.current?.click()} className="flex items-center gap-1 rounded-lg bg-muted/40 px-3 py-2 text-xs font-semibold hover:bg-muted/60">
+                <ImageIcon className="h-3.5 w-3.5 text-emerald-400" /> Photo
+              </button>
+              <button onClick={() => ref.current?.click()} className="flex items-center gap-1 rounded-lg bg-muted/40 px-3 py-2 text-xs font-semibold hover:bg-muted/60">
+                <Paperclip className="h-3.5 w-3.5 text-secondary" /> File
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setOpen(false); setFiles([]); setText(""); setSubject(""); }} className="rounded-lg px-3 py-2 text-xs text-foreground/60">Cancel</button>
+              <button disabled={busy} onClick={submit} className="flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50">
+                <Send className="h-3.5 w-3.5" /> {busy ? "Posting…" : "Post"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function PostCard({ post, userId, onChange }: { post: Post; userId: string; onChange: () => void }) {
+function PostCard({ post, userId, author, onChange }: { post: Post; userId: string; author?: Author; onChange: () => void }) {
   const [counts, setCounts] = useState({ like: 0, view: 0, download: 0 });
+  const [liked, setLiked] = useState(false);
+
   useEffect(() => {
     supabase
       .from("post_interactions")
-      .select("kind")
+      .select("kind,user_id")
       .eq("post_id", post.id)
       .then(({ data }) => {
         const c = { like: 0, view: 0, download: 0 } as Record<string, number>;
-        (data ?? []).forEach((r: { kind: string }) => (c[r.kind] = (c[r.kind] ?? 0) + 1));
+        (data ?? []).forEach((r: { kind: string; user_id: string }) => {
+          c[r.kind] = (c[r.kind] ?? 0) + 1;
+          if (r.user_id === userId && r.kind === "like") setLiked(true);
+        });
         setCounts(c as typeof counts);
       });
     supabase.from("post_interactions").upsert({ post_id: post.id, user_id: userId, kind: "view" }, { onConflict: "post_id,user_id,kind" });
   }, [post.id, userId]);
 
-  const interact = async (kind: "like" | "download") => {
-    await supabase.from("post_interactions").upsert({ post_id: post.id, user_id: userId, kind }, { onConflict: "post_id,user_id,kind" });
-    setCounts((c) => ({ ...c, [kind]: c[kind] + 1 }));
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-4">
-      <div className="text-xs text-secondary">{post.subject}</div>
-      <h3 className="mt-1 font-semibold">{post.title}</h3>
-      {post.description && <p className="mt-1 text-sm text-foreground/75">{post.description}</p>}
-      <div className="mt-3 flex items-center gap-3 text-xs text-foreground/70">
-        <button onClick={() => interact("like")} className="flex items-center gap-1 hover:text-secondary">
-          <Heart className="h-3.5 w-3.5" /> {counts.like}
-        </button>
-        <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {counts.view}</span>
-        {post.file_url && (
-          <a
-            href={post.file_url}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => interact("download")}
-            className="ml-auto flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-primary-foreground"
-          >
-            <Download className="h-3.5 w-3.5" /> {counts.download}
-          </a>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const { user } = useAuth();
-  const [form, setForm] = useState({ subject: "", title: "", description: "" });
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setBusy(true);
-    let file_url: string | null = null;
-    let file_type: string | null = null;
-    if (file) {
-      const path = `${user.id}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from("uploads").upload(path, file);
-      if (!error) {
-        const { data } = supabase.storage.from("uploads").getPublicUrl(path);
-        file_url = data.publicUrl;
-        file_type = file.type;
-      }
+  const toggleLike = async () => {
+    if (liked) {
+      await supabase.from("post_interactions").delete().eq("post_id", post.id).eq("user_id", userId).eq("kind", "like");
+      setLiked(false); setCounts((c) => ({ ...c, like: Math.max(0, c.like - 1) }));
+    } else {
+      await supabase.from("post_interactions").upsert({ post_id: post.id, user_id: userId, kind: "like" }, { onConflict: "post_id,user_id,kind" });
+      setLiked(true); setCounts((c) => ({ ...c, like: c.like + 1 }));
     }
-    const { error } = await supabase.from("posts").insert({ ...form, user_id: user.id, file_url, file_type });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Uploaded!");
-    onDone();
-    onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
-      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="glass w-full max-w-md space-y-3 rounded-2xl p-6">
-        <h2 className="text-lg font-bold">Share Notes / Books</h2>
-        <input required placeholder="Subject" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
-        <input required placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
-        <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" rows={3} />
-        <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-xs" />
-        <button disabled={busy} className="w-full rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground">{busy ? "Uploading…" : "Post"}</button>
-      </form>
-    </div>
-  );
-}
-
-function ProfileView() {
-  const { profile } = useAuth();
-  if (!profile) return null;
-  return (
-    <div className="glass space-y-2 rounded-2xl p-6">
-      <div className="mx-auto h-24 w-24 overflow-hidden rounded-full bg-muted">
-        {profile.profile_photo && <img src={profile.profile_photo} alt={profile.name} className="h-full w-full object-cover" />}
-      </div>
-      <h2 className="text-center text-xl font-bold">{profile.name}</h2>
-      <div className="text-center text-xs text-secondary">{profile.department}</div>
-      <div className="grid grid-cols-2 gap-2 pt-3 text-xs">
-        <Info label="Roll" v={profile.roll} />
-        <Info label="Reg." v={profile.registration_number} />
-        <Info label="Batch" v={profile.batch} />
-        <Info label="Session" v={profile.session} />
-        <Info label="District" v={profile.district} />
-        <Info label="Blood" v={profile.blood_group} />
-        <Info label="Phone" v={profile.phone} />
-        <Info label="Gender" v={profile.gender} />
-      </div>
-    </div>
-  );
-}
-function Info({ label, v }: { label: string; v: string | null | undefined }) {
-  return <div className="rounded-lg bg-muted/30 p-2"><div className="text-foreground/60">{label}</div><div className="font-semibold">{v ?? "—"}</div></div>;
-}
-
-function SettingsView() {
-  const { profile, refresh } = useAuth();
-  const [nick, setNick] = useState(profile?.nickname ?? "");
-  const [session, setSession] = useState(profile?.session ?? "");
-  const save = async () => {
-    const { error } = await supabase.from("profiles").update({ nickname: nick, session }).eq("id", profile!.id);
+  const remove = async () => {
+    if (!confirm("Delete this post?")) return;
+    const { error } = await supabase.from("posts").delete().eq("id", post.id);
     if (error) return toast.error(error.message);
-    toast.success("Saved");
-    refresh();
+    toast.success("Deleted");
+    onChange();
   };
+
+  const media = (post.media_urls && post.media_urls.length > 0)
+    ? post.media_urls
+    : (post.file_url ? [{ url: post.file_url, type: post.file_type ?? "", name: post.title }] : []);
+  const images = media.filter((m) => m.type.startsWith("image/"));
+  const files = media.filter((m) => !m.type.startsWith("image/"));
+  const authorRole = author ? displayRole(author) : "Student";
+  const isFounder = authorRole === "Founder";
+
   return (
-    <div className="glass space-y-3 rounded-2xl p-6">
-      <h2 className="text-lg font-bold">Settings</h2>
-      <input value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Nickname" className="w-full rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
-      <input value={session} onChange={(e) => setSession(e.target.value)} placeholder="Session" className="w-full rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
-      <button onClick={save} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Save</button>
-      <p className="text-xs text-foreground/60">Roll number and password can only be changed by admin.</p>
-    </div>
+    <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass overflow-hidden rounded-2xl">
+      <header className="flex items-center gap-3 px-4 pt-4">
+        <div className="h-10 w-10 overflow-hidden rounded-full bg-muted">
+          {author?.profile_photo ? <img src={author.profile_photo} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-sm font-bold text-secondary">{author?.name?.[0] ?? "?"}</div>}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <div className="truncate text-sm font-semibold">{author?.name ?? "Student"}</div>
+            {isFounder && <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/90 px-1.5 py-0.5 text-[9px] font-bold text-amber-950"><Crown className="h-2.5 w-2.5" /> Founder</span>}
+          </div>
+          <div className="text-[11px] text-foreground/60">{new Date(post.created_at).toLocaleString()} · {post.subject}</div>
+        </div>
+        {post.user_id === userId && (
+          <button onClick={remove} className="grid h-8 w-8 place-items-center rounded-full text-foreground/50 hover:bg-muted/40 hover:text-red-400" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
+        )}
+      </header>
+
+      {post.description && <p className="px-4 pt-3 text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{post.description}</p>}
+
+      {images.length > 0 && (
+        <div className={"mt-3 grid gap-1 " + (images.length === 1 ? "grid-cols-1" : images.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
+          {images.slice(0, 6).map((m, i) => (
+            <a key={i} href={m.url} target="_blank" rel="noreferrer" className="block bg-muted">
+              <img src={m.url} alt="" className="h-full max-h-[480px] w-full object-cover" loading="lazy" />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {files.length > 0 && (
+        <div className="space-y-2 px-4 pt-3">
+          {files.map((m, i) => {
+            const isPdf = m.type === "application/pdf" || m.name.toLowerCase().endsWith(".pdf");
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
+                <div className={"grid h-10 w-10 shrink-0 place-items-center rounded-lg " + (isPdf ? "bg-red-500/20 text-red-300" : "bg-secondary/20 text-secondary")}>
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{m.name}</div>
+                  <div className="text-[11px] text-foreground/60 uppercase">{isPdf ? "PDF" : (m.type.split("/").pop() || "File")}</div>
+                </div>
+                <a href={m.url} target="_blank" rel="noreferrer" className="grid h-9 w-9 place-items-center rounded-lg bg-muted/60 hover:bg-muted" aria-label="Open"><ExternalLink className="h-4 w-4" /></a>
+                <a href={m.url} download className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground" aria-label="Download"><Download className="h-4 w-4" /></a>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <footer className="mt-3 flex items-center gap-4 border-t border-border/40 px-4 py-2 text-xs text-foreground/70">
+        <button onClick={toggleLike} className={"flex items-center gap-1.5 transition " + (liked ? "text-red-400" : "hover:text-red-400")}>
+          <Heart className={"h-4 w-4 " + (liked ? "fill-current" : "")} /> {counts.like}
+        </button>
+        <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {counts.view}</span>
+        {files.length > 0 && <span className="ml-auto flex items-center gap-1.5"><Download className="h-4 w-4" /> {counts.download}</span>}
+      </footer>
+    </motion.article>
   );
 }

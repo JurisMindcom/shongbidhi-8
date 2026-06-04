@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { FloatingNav } from "@/components/FloatingNav";
+import { HamburgerMenu } from "@/components/HamburgerMenu";
 import { FloatingParticles } from "@/components/FloatingParticles";
 import cover from "@/assets/cover.jpg";
 import logo from "@/assets/logo.png";
@@ -171,6 +172,7 @@ function Home() {
       </footer>
 
       <FloatingNav />
+      <HamburgerMenu />
     </div>
   );
 }
