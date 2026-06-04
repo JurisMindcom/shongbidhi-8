@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { Plus, Heart, Download, Eye, LogOut, Home, Bell, Upload, User as UserIcon, Settings } from "lucide-react";
+import { Plus, Heart, Download, Eye, LogOut, Home, Upload, User as UserIcon, Settings, Users, BookOpen, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({ component: Dashboard });
@@ -26,6 +26,7 @@ function Dashboard() {
   const [tab, setTab] = useState<"home" | "profile" | "uploads" | "settings">("home");
   const [posts, setPosts] = useState<Post[]>([]);
   const [showUpload, setShowUpload] = useState(false);
+  const [stats, setStats] = useState({ students: 0, posts: 0, myPosts: 0 });
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/login" });
@@ -37,7 +38,28 @@ function Dashboard() {
   };
   useEffect(() => { loadPosts(); }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      const [{ count: s }, { count: p }, { count: m }] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "active"),
+        supabase.from("posts").select("id", { count: "exact", head: true }),
+        supabase.from("posts").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      ]);
+      setStats({ students: s ?? 0, posts: p ?? 0, myPosts: m ?? 0 });
+    };
+    load();
+    const ch = supabase
+      .channel("dashboard-stats")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user]);
+
   if (!user || !profile) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
+
+  const myPosts = posts.filter((p) => p.user_id === user.id);
 
   return (
     <div className="relative min-h-screen bg-background pb-24">
@@ -50,7 +72,7 @@ function Dashboard() {
         <div className="flex gap-2">
           {isAdmin && (
             <Link to="/admin" className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">
-              Admin
+              <Shield className="inline h-3 w-3" /> Admin
             </Link>
           )}
           <button onClick={() => signOut()} className="rounded-full bg-primary/80 px-3 py-1.5 text-xs font-semibold text-primary-foreground">
@@ -62,6 +84,19 @@ function Dashboard() {
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         {tab === "home" && (
           <>
+            <div className="grid grid-cols-3 gap-2">
+              <StatCard icon={Users} label="Students" value={stats.students} />
+              <StatCard icon={BookOpen} label="Resources" value={stats.posts} />
+              <StatCard icon={Upload} label="My Uploads" value={stats.myPosts} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Link to="/students" className="glass flex items-center gap-2 rounded-2xl p-4 text-sm font-semibold transition hover:bg-muted/40">
+                <Users className="h-4 w-4 text-secondary" /> Browse Students
+              </Link>
+              <button onClick={() => setShowUpload(true)} className="glass flex items-center gap-2 rounded-2xl p-4 text-sm font-semibold transition hover:bg-muted/40">
+                <Upload className="h-4 w-4 text-secondary" /> Share Notes
+              </button>
+            </div>
             <h1 className="text-2xl font-bold">Books &amp; <span className="text-gradient">Notes</span></h1>
             {posts.length === 0 ? (
               <div className="glass rounded-2xl p-8 text-center text-foreground/70">No uploads yet. Be the first to share!</div>
@@ -69,7 +104,14 @@ function Dashboard() {
           </>
         )}
         {tab === "profile" && <ProfileView />}
-        {tab === "uploads" && <h1 className="text-2xl font-bold">My Uploads</h1>}
+        {tab === "uploads" && (
+          <>
+            <h1 className="text-2xl font-bold">My <span className="text-gradient">Uploads</span></h1>
+            {myPosts.length === 0 ? (
+              <div className="glass rounded-2xl p-8 text-center text-foreground/70">You haven't shared anything yet.</div>
+            ) : myPosts.map((p) => <PostCard key={p.id} post={p} userId={user.id} onChange={loadPosts} />)}
+          </>
+        )}
         {tab === "settings" && <SettingsView />}
       </main>
 
@@ -101,6 +143,17 @@ function Dashboard() {
           </button>
         ))}
       </nav>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number }) {
+  return (
+    <div className="glass rounded-2xl p-3">
+      <div className="flex items-center gap-2 text-xs text-foreground/60">
+        <Icon className="h-3.5 w-3.5 text-secondary" /> {label}
+      </div>
+      <div className="mt-1 text-2xl font-bold">{value}</div>
     </div>
   );
 }
@@ -211,6 +264,8 @@ function ProfileView() {
         <Info label="Session" v={profile.session} />
         <Info label="District" v={profile.district} />
         <Info label="Blood" v={profile.blood_group} />
+        <Info label="Phone" v={profile.phone} />
+        <Info label="Gender" v={profile.gender} />
       </div>
     </div>
   );
