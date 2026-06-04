@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+const bloodGroupEnum = z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]);
+
 const studentSchema = z.object({
   name: z.string().min(1).max(120),
   roll: z.string().min(1).max(40),
@@ -10,9 +12,10 @@ const studentSchema = z.object({
   registration_number: z.string().max(60).optional().nullable(),
   session: z.string().max(40).optional().nullable(),
   batch: z.string().max(40).optional().nullable(),
-  blood_group: z.string().max(10).optional().nullable(),
+  blood_group: bloodGroupEnum.optional().nullable(),
   district: z.string().max(80).optional().nullable(),
   gender: z.enum(["Male", "Female"]),
+  phone: z.string().max(40).optional().nullable(),
   facebook_link: z.string().max(300).optional().nullable(),
   profile_photo: z.string().max(600).optional().nullable(),
   role: z.enum(["student", "cr", "admin"]).default("student"),
@@ -52,6 +55,7 @@ export const adminCreateStudent = createServerFn({ method: "POST" })
       blood_group: data.blood_group ?? null,
       district: data.district ?? null,
       gender: data.gender ?? null,
+      phone: data.phone ?? null,
       facebook_link: data.facebook_link ?? null,
       profile_photo: data.profile_photo ?? null,
     });
@@ -86,9 +90,10 @@ const updateSchema = z.object({
   registration_number: z.string().max(60).optional().nullable(),
   session: z.string().max(40).optional().nullable(),
   batch: z.string().max(40).optional().nullable(),
-  blood_group: z.string().max(10).optional().nullable(),
+  blood_group: bloodGroupEnum.optional().nullable(),
   district: z.string().max(80).optional().nullable(),
   gender: z.enum(["Male", "Female"]).optional(),
+  phone: z.string().max(40).optional().nullable(),
   facebook_link: z.string().max(300).optional().nullable(),
   profile_photo: z.string().max(600).optional().nullable(),
 });
