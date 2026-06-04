@@ -172,6 +172,7 @@ function Home() {
       </footer>
 
       <FloatingNav />
+      <HamburgerMenu />
     </div>
   );
 }
