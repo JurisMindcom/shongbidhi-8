@@ -362,9 +362,33 @@ function EditStudentModal({
     blood_group: student.blood_group ?? "",
     district: student.district ?? "",
     gender: (student.gender as "Male" | "Female" | null) ?? "",
+    phone: student.phone ?? "",
     facebook_link: student.facebook_link ?? "",
     profile_photo: student.profile_photo ?? "",
   });
+  const [uploading, setUploading] = useState(false);
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5MB");
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `students/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        cacheControl: "3600", upsert: false, contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      setF((p) => ({ ...p, profile_photo: data.publicUrl }));
+      toast.success("Photo uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
   return (
     <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/60 px-4 py-6">
       <div className="glass w-full max-w-lg space-y-3 rounded-2xl p-5">
@@ -374,16 +398,37 @@ function EditStudentModal({
             <X className="h-4 w-4" />
           </button>
         </div>
+        <div className="flex items-center gap-4 rounded-lg bg-muted/30 p-3">
+          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-muted/60 ring-2 ring-primary/30">
+            {f.profile_photo ? (
+              <img src={f.profile_photo} alt="Preview" className="h-full w-full object-cover" />
+            ) : (
+              <div className="grid h-full w-full place-items-center text-xs text-foreground/50">No photo</div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary/90 px-3 py-2 text-xs font-semibold text-primary-foreground">
+              <Upload className="h-3.5 w-3.5" />
+              {uploading ? "Uploading…" : f.profile_photo ? "Replace" : "Upload"}
+              <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={uploading} />
+            </label>
+            {f.profile_photo && (
+              <button type="button" onClick={() => setF({ ...f, profile_photo: "" })}
+                className="inline-flex items-center gap-1 rounded-lg bg-destructive/70 px-3 py-2 text-xs font-semibold text-destructive-foreground">
+                <X className="h-3.5 w-3.5" /> Remove
+              </button>
+            )}
+          </div>
+        </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {([
             ["name", "Full Name"],
             ["registration_number", "Registration"],
             ["session", "Session"],
             ["batch", "Batch"],
-            ["blood_group", "Blood Group"],
             ["district", "District"],
+            ["phone", "Phone"],
             ["facebook_link", "Facebook URL"],
-            ["profile_photo", "Photo URL"],
           ] as const).map(([k, p]) => (
             <input key={k} placeholder={p}
               value={f[k] as string}
@@ -391,9 +436,17 @@ function EditStudentModal({
               className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
           ))}
           <select
+            value={f.blood_group}
+            onChange={(e) => setF({ ...f, blood_group: e.target.value })}
+            className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
+          >
+            <option value="">Blood Group</option>
+            {BLOOD_GROUPS.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <select
             value={f.gender}
             onChange={(e) => setF({ ...f, gender: e.target.value as "Male" | "Female" })}
-            className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none sm:col-span-2"
+            className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
           >
             <option value="">Gender</option>
             <option value="Male">Male</option>
@@ -412,6 +465,7 @@ function EditStudentModal({
               blood_group: f.blood_group || null,
               district: f.district || null,
               gender: f.gender || undefined,
+              phone: f.phone || null,
               facebook_link: f.facebook_link || null,
               profile_photo: f.profile_photo || null,
             })}
