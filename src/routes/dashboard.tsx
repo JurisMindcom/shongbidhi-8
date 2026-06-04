@@ -264,6 +264,8 @@ function ProfileView() {
         <Info label="Session" v={profile.session} />
         <Info label="District" v={profile.district} />
         <Info label="Blood" v={profile.blood_group} />
+        <Info label="Phone" v={profile.phone} />
+        <Info label="Gender" v={profile.gender} />
       </div>
     </div>
   );
