@@ -20,13 +20,13 @@ export function FloatingNav() {
         </Link>
       </motion.div>
       <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 4, repeat: Infinity, delay: 0.5 }}>
-        <a
-          href="#students"
+        <Link
+          to="/students"
           className="glass flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-foreground transition hover:scale-105"
           style={{ boxShadow: "0 0 30px var(--glow)" }}
         >
           <Users className="h-4 w-4" /> Students
-        </a>
+        </Link>
       </motion.div>
     </motion.div>
   );

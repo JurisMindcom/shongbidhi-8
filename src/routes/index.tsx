@@ -1,15 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Profile } from "@/lib/auth";
+import { useEffect } from "react";
 import { FloatingNav } from "@/components/FloatingNav";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { StudentCard } from "@/components/StudentCard";
 import cover from "@/assets/cover.jpg";
 import logo from "@/assets/logo.png";
-import studentsCover from "@/assets/students-cover.jpg";
-import { Scale, BookOpen, Sparkles, Award, Heart } from "lucide-react";
+import { Scale, BookOpen, Sparkles, Award, Heart, Users, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,16 +27,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const [students, setStudents] = useState<Profile[]>([]);
   useEffect(() => {
     // bootstrap default admin (idempotent)
     fetch("/api/public/bootstrap", { method: "POST" }).catch(() => {});
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("status", "active")
-      .order("roll", { ascending: true })
-      .then(({ data }) => setStudents((data as Profile[]) ?? []));
   }, []);
 
   return (
@@ -153,30 +142,27 @@ function Home() {
         </div>
       </section>
 
-      {/* STUDENTS SHOWCASE */}
-      <section id="students" className="relative px-4 py-16">
-        <div className="mx-auto max-w-7xl">
-          <div className="relative mb-10 h-44 overflow-hidden rounded-3xl sm:h-56">
-            <img src={studentsCover} alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-            <div className="absolute inset-0 flex items-end p-6">
-              <h2 className="text-3xl font-bold sm:text-4xl">
-                Department <span className="text-gradient">Students</span>
+      {/* CTA to students page */}
+      <section className="relative px-4 py-14">
+        <div className="mx-auto max-w-4xl">
+          <Reveal>
+            <div className="glass flex flex-col items-center gap-4 rounded-3xl p-8 text-center sm:p-12">
+              <Users className="h-10 w-10 text-secondary" />
+              <h2 className="text-2xl font-bold sm:text-3xl">
+                Meet our <span className="text-gradient">students</span>
               </h2>
+              <p className="max-w-xl text-sm text-foreground/75">
+                Browse profiles of the talented learners shaping the future of law and land administration.
+              </p>
+              <Link
+                to="/students"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+                style={{ boxShadow: "0 0 30px var(--glow)" }}
+              >
+                View Students <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-          </div>
-
-          {students.length === 0 ? (
-            <div className="glass rounded-2xl p-10 text-center text-foreground/70">
-              No students added yet. The admin can add students from the dashboard.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {students.map((s) => (
-                <StudentCard key={s.id} profile={s} />
-              ))}
-            </div>
-          )}
+          </Reveal>
         </div>
       </section>
 
