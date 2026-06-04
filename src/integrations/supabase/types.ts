@@ -53,6 +53,7 @@ export type Database = {
           file_type: string | null
           file_url: string | null
           id: string
+          media_urls: Json
           pinned: boolean
           subject: string
           title: string
@@ -64,6 +65,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          media_urls?: Json
           pinned?: boolean
           subject: string
           title: string
@@ -75,6 +77,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           id?: string
+          media_urls?: Json
           pinned?: boolean
           subject?: string
           title?: string
