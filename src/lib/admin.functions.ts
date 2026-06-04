@@ -12,7 +12,7 @@ const studentSchema = z.object({
   batch: z.string().max(40).optional().nullable(),
   blood_group: z.string().max(10).optional().nullable(),
   district: z.string().max(80).optional().nullable(),
-  gender: z.string().max(20).optional().nullable(),
+  gender: z.enum(["Male", "Female"]),
   facebook_link: z.string().max(300).optional().nullable(),
   profile_photo: z.string().max(600).optional().nullable(),
   role: z.enum(["student", "cr", "admin"]).default("student"),
@@ -77,5 +77,48 @@ export const adminResetPassword = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.id, { password: data.password });
     if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
+  });
+
+const updateSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(120).optional(),
+  registration_number: z.string().max(60).optional().nullable(),
+  session: z.string().max(40).optional().nullable(),
+  batch: z.string().max(40).optional().nullable(),
+  blood_group: z.string().max(10).optional().nullable(),
+  district: z.string().max(80).optional().nullable(),
+  gender: z.enum(["Male", "Female"]).optional(),
+  facebook_link: z.string().max(300).optional().nullable(),
+  profile_photo: z.string().max(600).optional().nullable(),
+});
+
+export const adminUpdateStudent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => updateSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { id, ...patch } = data;
+    const { error } = await supabaseAdmin.from("profiles").update(patch).eq("id", id);
+    if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
+  });
+
+export const adminSetStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), status: z.enum(["active", "suspended"]) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ status: data.status })
+      .eq("id", data.id);
+    if (error) throw new Response(error.message, { status: 400 });
+    // also ban/unban auth user so they can't sign in while suspended
+    await supabaseAdmin.auth.admin.updateUserById(data.id, {
+      ban_duration: data.status === "suspended" ? "876000h" : "none",
+    } as never);
     return { ok: true };
   });
