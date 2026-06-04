@@ -94,6 +94,7 @@ export type Database = {
           id: string
           name: string
           nickname: string | null
+          phone: string | null
           profile_photo: string | null
           registration_number: string | null
           roll: string
@@ -112,6 +113,7 @@ export type Database = {
           id: string
           name: string
           nickname?: string | null
+          phone?: string | null
           profile_photo?: string | null
           registration_number?: string | null
           roll: string
@@ -130,6 +132,7 @@ export type Database = {
           id?: string
           name?: string
           nickname?: string | null
+          phone?: string | null
           profile_photo?: string | null
           registration_number?: string | null
           roll?: string
