@@ -4,37 +4,77 @@ import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { useTheme, type ThemeName } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
-import { adminCreateStudent, adminDeleteStudent } from "@/lib/admin.functions";
+import {
+  adminCreateStudent,
+  adminDeleteStudent,
+  adminUpdateStudent,
+  adminSetStatus,
+} from "@/lib/admin.functions";
 import { toast } from "sonner";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { LogOut, Trash2, UserPlus, Palette, ArrowLeft, Upload, X } from "lucide-react";
+import {
+  LogOut, Trash2, UserPlus, Palette, ArrowLeft, Upload, X,
+  Pencil, Pause, Play, Search,
+} from "lucide-react";
 import type { Profile } from "@/lib/auth";
 
 export const Route = createFileRoute("/admin")({ component: AdminPage });
+
+type FormState = {
+  name: string; roll: string; password: string;
+  registration_number: string; session: string; batch: string;
+  blood_group: string; district: string; gender: "" | "Male" | "Female";
+  facebook_link: string; profile_photo: string;
+  role: "student" | "cr" | "admin";
+};
+
+const emptyForm: FormState = {
+  name: "", roll: "", password: "", registration_number: "", session: "", batch: "",
+  blood_group: "", district: "", gender: "", facebook_link: "", profile_photo: "",
+  role: "student",
+};
 
 function AdminPage() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const nav = useNavigate();
   const [students, setStudents] = useState<Profile[]>([]);
+  const [query, setQuery] = useState("");
+  const [confirmDel, setConfirmDel] = useState<Profile | null>(null);
+  const [editing, setEditing] = useState<Profile | null>(null);
   const createFn = useServerFn(adminCreateStudent);
   const deleteFn = useServerFn(adminDeleteStudent);
+  const updateFn = useServerFn(adminUpdateStudent);
+  const statusFn = useServerFn(adminSetStatus);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) nav({ to: "/login" });
   }, [loading, user, isAdmin, nav]);
 
-  const load = async () => {
-    const { data } = await supabase.from("profiles").select("*").order("roll");
-    setStudents((data as Profile[]) ?? []);
-  };
-  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    supabase.from("profiles").select("*").order("roll").then(({ data }) => {
+      if (active) setStudents((data as Profile[]) ?? []);
+    });
+    const channel = supabase
+      .channel("profiles-admin")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload) => {
+        setStudents((prev) => {
+          if (payload.eventType === "DELETE") {
+            return prev.filter((p) => p.id !== (payload.old as Profile).id);
+          }
+          const next = payload.new as Profile;
+          const exists = prev.some((p) => p.id === next.id);
+          const merged = exists ? prev.map((p) => (p.id === next.id ? next : p)) : [...prev, next];
+          return merged.sort((a, b) => a.roll.localeCompare(b.roll));
+        });
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, [isAdmin]);
 
-  const [form, setForm] = useState({
-    name: "", roll: "", password: "", registration_number: "", session: "", batch: "",
-    blood_group: "", district: "", gender: "", facebook_link: "", profile_photo: "",
-    role: "student" as "student" | "cr" | "admin",
-  });
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [uploading, setUploading] = useState(false);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,21 +107,49 @@ function AdminPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.gender) return toast.error("Please select gender");
+    if (students.some((s) => s.roll === form.roll.trim())) {
+      return toast.error("A student with this roll already exists");
+    }
     try {
-      await createFn({ data: form });
+      await createFn({ data: { ...form, gender: form.gender } });
       toast.success("Student created");
-      setForm({ ...form, name: "", roll: "", password: "", registration_number: "", facebook_link: "", profile_photo: "" });
-      load();
+      setForm(emptyForm);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm("Delete this account?")) return;
-    try { await deleteFn({ data: { id } }); toast.success("Deleted"); load(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  const confirmDelete = async () => {
+    if (!confirmDel) return;
+    const id = confirmDel.id;
+    setConfirmDel(null);
+    // optimistic remove
+    setStudents((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteFn({ data: { id } });
+      toast.success("Account deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
   };
+
+  const toggleStatus = async (s: Profile) => {
+    const next = s.status === "active" ? "suspended" : "active";
+    setStudents((prev) => prev.map((p) => (p.id === s.id ? { ...p, status: next } : p)));
+    try {
+      await statusFn({ data: { id: s.id, status: next } });
+      toast.success(next === "active" ? "Activated" : "Suspended");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  };
+
+  const filtered = students.filter((s) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
+  });
 
   if (!isAdmin) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
 
@@ -149,7 +217,6 @@ function AdminPage() {
               ["batch", "Batch", false],
               ["blood_group", "Blood Group", false],
               ["district", "District", false],
-              ["gender", "Gender", false],
               ["facebook_link", "Facebook URL", false],
               ["profile_photo", "Profile photo URL", false],
             ] as const).map(([k, p, req]) => (
@@ -158,6 +225,16 @@ function AdminPage() {
                 onChange={(e) => setForm({ ...form, [k]: e.target.value })}
                 className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
             ))}
+            <select
+              required
+              value={form.gender}
+              onChange={(e) => setForm({ ...form, gender: e.target.value as FormState["gender"] })}
+              className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
+            >
+              <option value="">Gender *</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
             <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as typeof form.role })}
               className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none">
               <option value="student">Student</option>
@@ -170,22 +247,169 @@ function AdminPage() {
 
         {/* Student list */}
         <section className="glass rounded-2xl p-5">
-          <h2 className="mb-3 text-lg font-bold">Students ({students.length})</h2>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-bold">Students ({filtered.length})</h2>
+            <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-1.5">
+              <Search className="h-4 w-4 text-secondary" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name or roll…"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
-            {students.map((s) => (
-              <div key={s.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                <div>
-                  <div className="font-semibold">{s.name}</div>
-                  <div className="text-xs text-foreground/60">Roll {s.roll} · {s.batch ?? "—"}</div>
+            {filtered.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{s.name}</span>
+                    {s.status !== "active" && (
+                      <span className="rounded-full bg-destructive/30 px-2 py-0.5 text-[10px] uppercase text-destructive-foreground">
+                        {s.status}
+                      </span>
+                    )}
+                  </div>
+                  <div className="truncate text-xs text-foreground/60">
+                    Roll {s.roll} · {s.gender ?? "—"} · {s.batch ?? "—"}
+                  </div>
                 </div>
-                <button onClick={() => remove(s.id)} className="rounded-md bg-destructive/80 p-2 text-destructive-foreground">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setEditing(s)} title="Edit"
+                    className="rounded-md bg-muted/60 p-2 text-foreground/80 hover:bg-muted">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => toggleStatus(s)}
+                    title={s.status === "active" ? "Suspend" : "Activate"}
+                    className="rounded-md bg-muted/60 p-2 text-foreground/80 hover:bg-muted">
+                    {s.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </button>
+                  <button onClick={() => setConfirmDel(s)} title="Delete"
+                    className="rounded-md bg-destructive/80 p-2 text-destructive-foreground hover:bg-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </section>
       </main>
+
+      {/* Edit modal */}
+      {editing && (
+        <EditStudentModal
+          student={editing}
+          onClose={() => setEditing(null)}
+          onSave={async (patch) => {
+            try {
+              await updateFn({ data: { id: editing.id, ...patch } });
+              toast.success("Student updated");
+              setEditing(null);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Failed");
+            }
+          }}
+        />
+      )}
+
+      {/* Delete confirm modal */}
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 px-4">
+          <div className="glass w-full max-w-sm space-y-4 rounded-2xl p-6 text-center">
+            <h3 className="text-lg font-bold">Delete account?</h3>
+            <p className="text-sm text-foreground/75">
+              This permanently removes <span className="font-semibold">{confirmDel.name}</span> (Roll {confirmDel.roll}).
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-center gap-2">
+              <button onClick={() => setConfirmDel(null)}
+                className="rounded-lg bg-muted/60 px-4 py-2 text-sm font-semibold">Cancel</button>
+              <button onClick={confirmDelete}
+                className="rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditStudentModal({
+  student, onClose, onSave,
+}: {
+  student: Profile;
+  onClose: () => void;
+  onSave: (patch: Record<string, unknown>) => void | Promise<void>;
+}) {
+  const [f, setF] = useState({
+    name: student.name ?? "",
+    registration_number: student.registration_number ?? "",
+    session: student.session ?? "",
+    batch: student.batch ?? "",
+    blood_group: student.blood_group ?? "",
+    district: student.district ?? "",
+    gender: (student.gender as "Male" | "Female" | null) ?? "",
+    facebook_link: student.facebook_link ?? "",
+    profile_photo: student.profile_photo ?? "",
+  });
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/60 px-4 py-6">
+      <div className="glass w-full max-w-lg space-y-3 rounded-2xl p-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Edit {student.name}</h3>
+          <button onClick={onClose} className="rounded-full bg-muted/60 p-1.5">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([
+            ["name", "Full Name"],
+            ["registration_number", "Registration"],
+            ["session", "Session"],
+            ["batch", "Batch"],
+            ["blood_group", "Blood Group"],
+            ["district", "District"],
+            ["facebook_link", "Facebook URL"],
+            ["profile_photo", "Photo URL"],
+          ] as const).map(([k, p]) => (
+            <input key={k} placeholder={p}
+              value={f[k] as string}
+              onChange={(e) => setF({ ...f, [k]: e.target.value })}
+              className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none" />
+          ))}
+          <select
+            value={f.gender}
+            onChange={(e) => setF({ ...f, gender: e.target.value as "Male" | "Female" })}
+            className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none sm:col-span-2"
+          >
+            <option value="">Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose}
+            className="rounded-lg bg-muted/60 px-4 py-2 text-sm font-semibold">Cancel</button>
+          <button
+            onClick={() => onSave({
+              name: f.name || undefined,
+              registration_number: f.registration_number || null,
+              session: f.session || null,
+              batch: f.batch || null,
+              blood_group: f.blood_group || null,
+              district: f.district || null,
+              gender: f.gender || undefined,
+              facebook_link: f.facebook_link || null,
+              profile_photo: f.profile_photo || null,
+            })}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
+            Save
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

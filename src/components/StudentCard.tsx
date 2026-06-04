@@ -58,6 +58,7 @@ export function StudentCard({ profile }: { profile: Profile }) {
           <div className="flex-1 space-y-0.5 text-[11px] leading-tight text-foreground/90">
             <div className="text-sm font-bold">{profile.name}</div>
             <div>Batch: <span className="text-secondary">{profile.batch ?? "-"}</span></div>
+            <div>Gender: <span className="text-secondary">{profile.gender ?? "-"}</span></div>
             <div>District: <span className="text-secondary">{profile.district ?? "-"}</span></div>
             <div>Blood: <span className="text-secondary">{profile.blood_group ?? "-"}</span></div>
           </div>

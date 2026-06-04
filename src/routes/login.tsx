@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import loginBg from "@/assets/login-bg.jpg";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { ArrowLeft, Lock, ShieldCheck, User } from "lucide-react";
+import { ArrowLeft, Lock, User } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Login · Law & Land Administration" }] }),
@@ -15,10 +15,10 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { signInWithRoll, user, isAdmin, loading } = useAuth();
   const nav = useNavigate();
-  const [role, setRole] = useState<"student" | "admin">("student");
   const [roll, setRoll] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [remember, setRemember] = useState(true);
 
   useEffect(() => {
     if (!loading && user) nav({ to: isAdmin ? "/admin" : "/dashboard" });
@@ -29,8 +29,11 @@ function LoginPage() {
     setSubmitting(true);
     const { error } = await signInWithRoll(roll, password);
     setSubmitting(false);
-    if (error) toast.error(error);
-    else toast.success("Welcome back");
+    if (error) return toast.error(error);
+    try {
+      localStorage.setItem("ll-remember", remember ? "1" : "0");
+    } catch {}
+    toast.success("Welcome back");
   };
 
   return (
@@ -59,24 +62,18 @@ function LoginPage() {
             <p className="text-xs text-foreground/70">Sign in to your department portal</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-1">
-            {(["student", "admin"] as const).map((r) => (
-              <button
-                type="button"
-                key={r}
-                onClick={() => setRole(r)}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold capitalize transition ${
-                  role === r ? "bg-primary text-primary-foreground" : "text-foreground/70"
-                }`}
-              >
-                {r === "admin" ? <ShieldCheck className="mr-1 inline h-4 w-4" /> : <User className="mr-1 inline h-4 w-4" />}
-                {r}
-              </button>
-            ))}
-          </div>
-
           <Field icon={<User className="h-4 w-4" />} placeholder="Roll Number" value={roll} onChange={setRoll} />
           <Field icon={<Lock className="h-4 w-4" />} type="password" placeholder="Password" value={password} onChange={setPassword} />
+
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground/75">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="h-4 w-4 accent-[color:var(--primary)]"
+            />
+            Remember me on this device
+          </label>
 
           <button
             disabled={submitting}
