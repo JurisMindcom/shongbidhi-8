@@ -37,6 +37,10 @@ export function useNavigate() {
   return useContext(NavigationContext)?.navigate ?? (() => {});
 }
 
+export function usePathname() {
+  return useContext(NavigationContext)?.path ?? "/";
+}
+
 export function useRouter() {
   const navigate = useNavigate();
   return {
