@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, usePathname, useRouter } from "@/lib/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Home, LayoutDashboard, Users, BookOpen, Settings, User as UserIcon, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -18,11 +18,11 @@ export function HamburgerMenu() {
   const [open, setOpen] = useState(false);
   const { user, isAdmin, signOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    const unsub = router.subscribe("onResolved", () => setOpen(false));
-    return () => unsub();
-  }, [router]);
+    setOpen(false);
+  }, [pathname]);
 
   return (
     <>

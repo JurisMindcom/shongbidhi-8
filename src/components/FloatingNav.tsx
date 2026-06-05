@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 import { motion } from "framer-motion";
 import { LogIn, Users } from "lucide-react";
 
