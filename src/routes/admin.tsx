@@ -1,4 +1,3 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { createFileRoute, Link, useNavigate } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
@@ -66,7 +65,7 @@ async function adminDeleteStudent(id: string) {
 }
 
 async function adminUpdateStudent(id: string, patch: Record<string, unknown>) {
-  const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+  const { error } = await supabase.from("profiles").update(patch as never).eq("id", id);
   if (error) throw error;
 }
 
@@ -75,7 +74,7 @@ async function adminSetStatus(id: string, status: "active" | "suspended") {
   if (error) throw error;
 }
 
-function AdminPage() {
+export default function AdminPage() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const nav = useNavigate();
@@ -348,7 +347,7 @@ function AdminPage() {
           onClose={() => setEditing(null)}
           onSave={async (patch) => {
             try {
-              await updateFn({ data: { id: editing.id, ...patch } });
+              await adminUpdateStudent(editing.id, patch);
               toast.success("Student updated");
               setEditing(null);
             } catch (e) {
