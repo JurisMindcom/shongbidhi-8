@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@/lib/navigation";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-function LoginPage() {
+export default function LoginPage() {
   const { signInWithRoll, user, isAdmin, loading, setLoginMode, loginMode } = useAuth();
   const nav = useNavigate();
   const [roll, setRoll] = useState("");

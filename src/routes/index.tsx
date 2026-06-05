@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@/lib/navigation";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { FloatingNav } from "@/components/FloatingNav";
@@ -27,12 +27,7 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-function Home() {
-  useEffect(() => {
-    // bootstrap default admin (idempotent)
-    fetch("/api/public/bootstrap", { method: "POST" }).catch(() => {});
-  }, []);
-
+export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* HERO */}
