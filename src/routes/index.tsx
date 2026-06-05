@@ -1,3 +1,4 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { createFileRoute, Link } from "@/lib/navigation";
 import { motion } from "framer-motion";
 import { FloatingNav } from "@/components/FloatingNav";
