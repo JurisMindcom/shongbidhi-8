@@ -1,4 +1,3 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { createFileRoute, useNavigate, Link } from "@/lib/navigation";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -24,7 +23,7 @@ export default function LoginPage() {
   const [chosenMode, setChosenMode] = useState<"admin" | "student">(loginMode);
 
   useEffect(() => {
-    if (!loading && user) nav({ to: isAdmin ? "/admin" : "/dashboard" });
+    if (!loading && user) nav(isAdmin ? "/admin" : "/dashboard");
   }, [user, isAdmin, loading, nav]);
 
   const submit = async (e: React.FormEvent) => {
