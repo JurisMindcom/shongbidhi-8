@@ -1,15 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@/lib/navigation";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { useTheme, type ThemeName } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  adminCreateStudent,
-  adminDeleteStudent,
-  adminUpdateStudent,
-  adminSetStatus,
-} from "@/lib/admin.functions";
 import { toast } from "sonner";
 import { FloatingParticles } from "@/components/FloatingParticles";
 import {
@@ -36,6 +29,51 @@ const emptyForm: FormState = {
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
+const clean = (v: string) => v.trim() || null;
+
+async function adminCreateStudent(data: FormState & { gender: "Male" | "Female" }) {
+  const { data: signUp, error: signUpError } = await supabase.auth.signUp({
+    email: `${data.roll.trim()}@law.iu.local`,
+    password: data.password,
+    options: { data: { name: data.name.trim(), roll: data.roll.trim() } },
+  });
+  if (signUpError) throw signUpError;
+  const id = signUp.user?.id;
+  if (!id) throw new Error("Account was not created. Check authentication settings.");
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id,
+    name: data.name.trim(),
+    roll: data.roll.trim(),
+    registration_number: clean(data.registration_number),
+    session: clean(data.session),
+    batch: clean(data.batch),
+    blood_group: clean(data.blood_group),
+    district: clean(data.district),
+    gender: data.gender,
+    phone: clean(data.phone),
+    facebook_link: clean(data.facebook_link),
+    profile_photo: clean(data.profile_photo),
+    status: "active",
+  });
+  if (profileError) throw profileError;
+  await supabase.from("user_roles").upsert({ user_id: id, role: data.role });
+}
+
+async function adminDeleteStudent(id: string) {
+  const { error } = await supabase.from("profiles").delete().eq("id", id);
+  if (error) throw error;
+}
+
+async function adminUpdateStudent(id: string, patch: Record<string, unknown>) {
+  const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+async function adminSetStatus(id: string, status: "active" | "suspended") {
+  const { error } = await supabase.from("profiles").update({ status }).eq("id", id);
+  if (error) throw error;
+}
+
 function AdminPage() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -44,13 +82,9 @@ function AdminPage() {
   const [query, setQuery] = useState("");
   const [confirmDel, setConfirmDel] = useState<Profile | null>(null);
   const [editing, setEditing] = useState<Profile | null>(null);
-  const createFn = useServerFn(adminCreateStudent);
-  const deleteFn = useServerFn(adminDeleteStudent);
-  const updateFn = useServerFn(adminUpdateStudent);
-  const statusFn = useServerFn(adminSetStatus);
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) nav({ to: "/login" });
+    if (!loading && (!user || !isAdmin)) nav("/login");
   }, [loading, user, isAdmin, nav]);
 
   useEffect(() => {
@@ -114,7 +148,7 @@ function AdminPage() {
       return toast.error("A student with this roll already exists");
     }
     try {
-      await createFn({ data: { ...form, gender: form.gender } });
+      await adminCreateStudent({ ...form, gender: form.gender });
       toast.success("Student created");
       setForm(emptyForm);
     } catch (err) {
@@ -129,7 +163,7 @@ function AdminPage() {
     // optimistic remove
     setStudents((prev) => prev.filter((p) => p.id !== id));
     try {
-      await deleteFn({ data: { id } });
+      await adminDeleteStudent(id);
       toast.success("Account deleted");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -140,7 +174,7 @@ function AdminPage() {
     const next = s.status === "active" ? "suspended" : "active";
     setStudents((prev) => prev.map((p) => (p.id === s.id ? { ...p, status: next } : p)));
     try {
-      await statusFn({ data: { id: s.id, status: next } });
+      await adminSetStatus(s.id, next);
       toast.success(next === "active" ? "Activated" : "Suspended");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
