@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@/lib/navigation";
+import { createFileRoute, Link, useNavigate } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme, type ThemeName } from "@/lib/theme";
@@ -10,6 +10,8 @@ import {
   Pencil, Pause, Play, Search,
 } from "lucide-react";
 import type { Profile } from "@/lib/auth";
+
+export const Route = createFileRoute("/admin")({ component: AdminPage });
 
 type FormState = {
   name: string; roll: string; password: string;
