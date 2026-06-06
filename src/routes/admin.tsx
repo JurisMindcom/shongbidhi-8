@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@/lib/navigation";
+import { Link, useNavigate } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme, type ThemeName } from "@/lib/theme";
@@ -10,8 +10,6 @@ import {
   Pencil, Pause, Play, Search,
 } from "lucide-react";
 import type { Profile } from "@/lib/auth";
-
-export const Route = createFileRoute("/admin")({ component: AdminPage });
 
 type FormState = {
   name: string; roll: string; password: string;
@@ -32,31 +30,35 @@ const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const
 const clean = (v: string) => v.trim() || null;
 
 async function adminCreateStudent(data: FormState & { gender: "Male" | "Female" }) {
-  const { data: signUp, error: signUpError } = await supabase.auth.signUp({
-    email: `${data.roll.trim()}@law.iu.local`,
-    password: data.password,
-    options: { data: { name: data.name.trim(), roll: data.roll.trim() } },
+  const { data: res, error } = await supabase.functions.invoke("admin-create-student", {
+    body: {
+      name: data.name.trim(),
+      roll: data.roll.trim(),
+      password: data.password,
+      registration_number: clean(data.registration_number),
+      session: clean(data.session),
+      batch: clean(data.batch),
+      blood_group: clean(data.blood_group),
+      district: clean(data.district),
+      gender: data.gender,
+      phone: clean(data.phone),
+      facebook_link: clean(data.facebook_link),
+      profile_photo: clean(data.profile_photo),
+      role: data.role,
+    },
   });
-  if (signUpError) throw signUpError;
-  const id = signUp.user?.id;
-  if (!id) throw new Error("Account was not created. Check authentication settings.");
-  const { error: profileError } = await supabase.from("profiles").upsert({
-    id,
-    name: data.name.trim(),
-    roll: data.roll.trim(),
-    registration_number: clean(data.registration_number),
-    session: clean(data.session),
-    batch: clean(data.batch),
-    blood_group: clean(data.blood_group),
-    district: clean(data.district),
-    gender: data.gender,
-    phone: clean(data.phone),
-    facebook_link: clean(data.facebook_link),
-    profile_photo: clean(data.profile_photo),
-    status: "active",
-  });
-  if (profileError) throw profileError;
-  await supabase.from("user_roles").upsert({ user_id: id, role: data.role });
+  if (error) {
+    // Surface server-supplied error body when available
+    const ctx = (error as { context?: Response }).context;
+    if (ctx) {
+      try {
+        const body = await ctx.json();
+        throw new Error(body?.error ?? error.message);
+      } catch { /* fall through */ }
+    }
+    throw error;
+  }
+  if (res && (res as { error?: string }).error) throw new Error((res as { error: string }).error);
 }
 
 async function adminDeleteStudent(id: string) {
@@ -75,20 +77,21 @@ async function adminSetStatus(id: string, status: "active" | "suspended") {
 }
 
 export default function AdminPage() {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, isAdmin, isCR, loading, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const nav = useNavigate();
   const [students, setStudents] = useState<Profile[]>([]);
   const [query, setQuery] = useState("");
   const [confirmDel, setConfirmDel] = useState<Profile | null>(null);
   const [editing, setEditing] = useState<Profile | null>(null);
+  const canAccess = isAdmin || isCR;
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) nav("/login");
-  }, [loading, user, isAdmin, nav]);
+    if (!loading && (!user || !canAccess)) nav("/login");
+  }, [loading, user, canAccess, nav]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canAccess) return;
     let active = true;
     supabase.from("profiles").select("*").order("roll").then(({ data }) => {
       if (active) setStudents((data as Profile[]) ?? []);
@@ -108,9 +111,10 @@ export default function AdminPage() {
       })
       .subscribe();
     return () => { active = false; supabase.removeChannel(channel); };
-  }, [isAdmin]);
+  }, [canAccess]);
 
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,15 +148,21 @@ export default function AdminPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.gender) return toast.error("Please select gender");
+    if (!form.password || form.password.length < 6) return toast.error("Password must be at least 6 characters");
     if (students.some((s) => s.roll === form.roll.trim())) {
       return toast.error("A student with this roll already exists");
     }
+    setSubmitting(true);
     try {
-      await adminCreateStudent({ ...form, gender: form.gender });
+      // CRs can only create students
+      const safeRole = isAdmin ? form.role : "student";
+      await adminCreateStudent({ ...form, role: safeRole, gender: form.gender });
       toast.success("Student created");
       setForm(emptyForm);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -187,7 +197,7 @@ export default function AdminPage() {
     return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
   });
 
-  if (!isAdmin) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
+  if (!canAccess) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
 
   return (
     <div className="relative min-h-screen bg-background pb-12">
@@ -195,7 +205,7 @@ export default function AdminPage() {
       <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <Link to="/" className="rounded-full bg-muted/40 p-2"><ArrowLeft className="h-4 w-4" /></Link>
-          <h1 className="text-lg font-bold">Admin Dashboard</h1>
+          <h1 className="text-lg font-bold">{isAdmin ? "Admin Dashboard" : "CR Dashboard"}</h1>
         </div>
         <button onClick={signOut} className="rounded-full bg-primary/80 px-3 py-1.5 text-xs font-semibold text-primary-foreground">
           <LogOut className="inline h-3.5 w-3.5" />
@@ -203,7 +213,8 @@ export default function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-        {/* Theme switcher */}
+        {/* Theme switcher (admin only) */}
+        {isAdmin && (
         <section className="glass rounded-2xl p-5">
           <h2 className="mb-3 flex items-center gap-2 text-lg font-bold"><Palette className="h-4 w-4" /> Global Theme</h2>
           <div className="flex flex-wrap gap-2">
@@ -215,6 +226,7 @@ export default function AdminPage() {
             ))}
           </div>
         </section>
+        )}
 
         {/* Add student */}
         <section className="glass rounded-2xl p-5">
@@ -279,17 +291,29 @@ export default function AdminPage() {
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as typeof form.role })}
-              className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none">
-              <option value="student">Student</option>
-              <option value="cr">CR</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button className="sm:col-span-2 rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground">Create Account</button>
+            {isAdmin ? (
+              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as typeof form.role })}
+                className="rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none">
+                <option value="student">Student</option>
+                <option value="cr">CR</option>
+                <option value="admin">Admin</option>
+              </select>
+            ) : (
+              <div className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-foreground/70">
+                Role: Student (CR can only create students)
+              </div>
+            )}
+            <button
+              disabled={submitting}
+              className="sm:col-span-2 rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {submitting ? "Creating…" : "Create Account"}
+            </button>
           </form>
         </section>
 
-        {/* Student list */}
+        {/* Student list (admin only) */}
+        {isAdmin && (
         <section className="glass rounded-2xl p-5">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-bold">Students ({filtered.length})</h2>
@@ -338,10 +362,11 @@ export default function AdminPage() {
             ))}
           </div>
         </section>
+        )}
       </main>
 
-      {/* Edit modal */}
-      {editing && (
+      {/* Edit modal (admin only) */}
+      {isAdmin && editing && (
         <EditStudentModal
           student={editing}
           onClose={() => setEditing(null)}
@@ -357,8 +382,8 @@ export default function AdminPage() {
         />
       )}
 
-      {/* Delete confirm modal */}
-      {confirmDel && (
+      {/* Delete confirm modal (admin only) */}
+      {isAdmin && confirmDel && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 px-4">
           <div className="glass w-full max-w-sm space-y-4 rounded-2xl p-6 text-center">
             <h3 className="text-lg font-bold">Delete account?</h3>
