@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { usePathname, Link } from "@/lib/navigation";
 import { Route as IndexRoute } from "./routes/index";
 import { Route as LoginRoute } from "./routes/login";
@@ -7,7 +8,7 @@ import { Route as ProfileRoute } from "./routes/profile";
 import { Route as SettingsRoute } from "./routes/settings";
 import { Route as StudentsRoute } from "./routes/students";
 
-const routes: Record<string, { component: () => JSX.Element }> = {
+const routes: Record<string, { component: () => ReactElement }> = {
   "/": IndexRoute as never,
   "/login": LoginRoute as never,
   "/admin": AdminRoute as never,
@@ -39,6 +40,6 @@ export function App() {
   const path = usePathname();
   const match = routes[path];
   if (!match) return <NotFound />;
-  const Component = (match as { component: () => JSX.Element }).component;
+  const Component = (match as { component: () => ReactElement }).component;
   return <Component />;
 }
