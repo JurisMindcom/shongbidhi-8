@@ -13,7 +13,7 @@ export const Route = createFileRoute("/login")({
 });
 
 export default function LoginPage() {
-  const { signInWithRoll, user, isAdmin, loading, setLoginMode, loginMode } = useAuth();
+  const { signInWithRoll, user, isAdmin, isCR, loading, setLoginMode, loginMode } = useAuth();
   const nav = useNavigate();
   const [roll, setRoll] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +23,8 @@ export default function LoginPage() {
   const [chosenMode, setChosenMode] = useState<"admin" | "student">(loginMode);
 
   useEffect(() => {
-    if (!loading && user) nav(isAdmin ? "/admin" : "/dashboard");
-  }, [user, isAdmin, loading, nav]);
+    if (!loading && user) nav(isAdmin || isCR ? "/admin" : "/dashboard");
+  }, [user, isAdmin, isCR, loading, nav]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

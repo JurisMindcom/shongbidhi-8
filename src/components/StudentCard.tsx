@@ -7,7 +7,7 @@ export const FOUNDER_ROLL = "2426006";
 export const displayRole = (profile: Pick<Profile, "roll">) =>
   profile.roll === FOUNDER_ROLL ? "Founder" : "Student";
 
-export function StudentCard({ profile }: { profile: Profile }) {
+export function StudentCard({ profile, serial }: { profile: Profile; serial?: number }) {
   const [flipped, setFlipped] = useState(false);
   const role = displayRole(profile);
   const isFounder = role === "Founder";
@@ -28,6 +28,11 @@ export function StudentCard({ profile }: { profile: Profile }) {
           className="glass absolute inset-0 flex flex-col items-center gap-2 rounded-2xl p-3"
           style={{ backfaceVisibility: "hidden" }}
         >
+          {typeof serial === "number" && (
+            <span className="absolute left-2 top-2 z-10 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow">
+              #{serial}
+            </span>
+          )}
           <div className="relative h-[72%] w-full overflow-hidden rounded-xl bg-muted">
             {profile.profile_photo ? (
               <img src={profile.profile_photo} alt={profile.name} className="h-full w-full object-cover" />
@@ -65,6 +70,9 @@ export function StudentCard({ profile }: { profile: Profile }) {
           </span>
           <div className="flex-1 space-y-1 text-xs leading-tight text-foreground/90">
             <div className="text-sm font-bold">{profile.name}</div>
+            {typeof serial === "number" && (
+              <div>Serial: <span className="text-secondary">#{serial}</span></div>
+            )}
             <div>Roll: <span className="text-secondary">{profile.roll}</span></div>
             <div>District: <span className="text-secondary">{profile.district ?? "-"}</span></div>
             <div>Blood: <span className="text-secondary">{profile.blood_group ?? "-"}</span></div>

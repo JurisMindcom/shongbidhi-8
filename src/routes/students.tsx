@@ -23,6 +23,7 @@ type GenderFilter = "all" | "Male" | "Female";
 
 function StudentsPage() {
   const [students, setStudents] = useState<Profile[]>([]);
+  const [nonStudentIds, setNonStudentIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [gender, setGender] = useState<GenderFilter>("all");
   const [sort, setSort] = useState<SortKey>("roll");
@@ -32,16 +33,15 @@ function StudentsPage() {
 
   useEffect(() => {
     let active = true;
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("status", "active")
-      .order("roll", { ascending: true })
-      .then(({ data }) => {
-        if (!active) return;
-        setStudents((data as Profile[]) ?? []);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.from("profiles").select("*").eq("status", "active").order("roll", { ascending: true }),
+      supabase.from("user_roles").select("user_id, role").in("role", ["admin", "cr"]),
+    ]).then(([{ data: profs }, { data: roles }]) => {
+      if (!active) return;
+      setNonStudentIds(new Set(((roles ?? []) as { user_id: string }[]).map((r) => r.user_id)));
+      setStudents((profs as Profile[]) ?? []);
+      setLoading(false);
+    });
 
     const channel = supabase
       .channel("profiles-public")
@@ -58,15 +58,29 @@ function StudentsPage() {
         });
       })
       .subscribe();
+    const rolesChannel = supabase
+      .channel("user-roles-public")
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => {
+        supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("role", ["admin", "cr"])
+          .then(({ data }) =>
+            setNonStudentIds(new Set(((data ?? []) as { user_id: string }[]).map((r) => r.user_id))),
+          );
+      })
+      .subscribe();
     return () => {
       active = false;
       supabase.removeChannel(channel);
+      supabase.removeChannel(rolesChannel);
     };
   }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out = students.filter((s) => {
+      if (nonStudentIds.has(s.id)) return false;
       if (gender !== "all" && s.gender !== gender) return false;
       if (!q) return true;
       return (
@@ -80,7 +94,16 @@ function StudentsPage() {
       sort === "name" ? a.name.localeCompare(b.name) : a.roll.localeCompare(b.roll),
     );
     return out;
-  }, [students, query, gender, sort]);
+  }, [students, query, gender, sort, nonStudentIds]);
+
+  // Global serial map based on Roll Number ascending, students only
+  const serialByRoll = useMemo(() => {
+    const onlyStudents = students.filter((s) => !nonStudentIds.has(s.id));
+    onlyStudents.sort((a, b) => a.roll.localeCompare(b.roll));
+    const map = new Map<string, number>();
+    onlyStudents.forEach((s, i) => map.set(s.id, i + 1));
+    return map;
+  }, [students, nonStudentIds]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -157,7 +180,7 @@ function StudentsPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {visible.map((s) => (
-              <StudentCard key={s.id} profile={s} />
+              <StudentCard key={s.id} profile={s} serial={serialByRoll.get(s.id)} />
             ))}
           </div>
         )}
