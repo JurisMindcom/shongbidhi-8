@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@/lib/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
