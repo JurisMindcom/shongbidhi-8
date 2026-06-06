@@ -30,6 +30,8 @@ type AuthCtx = {
   profile: Profile | null;
   roles: Role[];
   isAdmin: boolean;
+  isCR: boolean;
+  canManage: boolean;
   loginMode: LoginMode;
   setLoginMode: (m: LoginMode) => void;
   loading: boolean;
@@ -123,6 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         roles,
         isAdmin: roles.includes("admin") && loginMode === "admin",
+        isCR: roles.includes("cr"),
+        canManage:
+          (roles.includes("admin") && loginMode === "admin") || roles.includes("cr"),
         loginMode,
         setLoginMode,
         loading,
