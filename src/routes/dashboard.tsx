@@ -4,9 +4,13 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { HamburgerMenu } from "@/components/HamburgerMenu";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { BottomNav } from "@/components/BottomNav";
+import { PostMenu } from "@/components/PostMenu";
+import { LikesModal } from "@/components/LikesModal";
+import { CommentsSection } from "@/components/CommentsSection";
 import { displayRole } from "@/components/StudentCard";
-import { Heart, Download, Eye, Image as ImageIcon, FileText, X, Send, Crown, Paperclip, Trash2, ExternalLink } from "lucide-react";
+import { Heart, Download, Eye, Image as ImageIcon, FileText, X, Send, Crown, Paperclip, ExternalLink, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({
@@ -29,7 +33,7 @@ type Post = {
 type Author = { id: string; name: string; profile_photo: string | null; roll: string };
 
 function Dashboard() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isAdmin } = useAuth();
   const nav = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [authors, setAuthors] = useState<Record<string, Author>>({});
@@ -68,10 +72,10 @@ function Dashboard() {
   return (
     <div className="relative min-h-screen bg-background pb-20">
       <FloatingParticles count={8} />
-      <HamburgerMenu />
+      <DashboardHeader />
 
       {/* Profile header */}
-      <section className="mx-auto max-w-2xl px-4 pt-16">
+      <section className="mx-auto max-w-2xl px-4 pt-4">
         <Link to="/profile" className="glass flex items-center gap-3 rounded-2xl p-4 transition hover:bg-muted/30">
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-primary/40">
             {profile.profile_photo ? (
@@ -105,9 +109,10 @@ function Dashboard() {
         {posts.length === 0 ? (
           <div className="glass rounded-2xl p-10 text-center text-foreground/60">No posts yet. Share the first one!</div>
         ) : (
-          posts.map((p) => <PostCard key={p.id} post={p} userId={user.id} author={authors[p.user_id]} onChange={loadPosts} />)
+          posts.map((p) => <PostCard key={p.id} post={p} userId={user.id} isAdmin={isAdmin} author={authors[p.user_id]} onChange={loadPosts} />)
         )}
       </section>
+      <BottomNav />
     </div>
   );
 }
@@ -229,9 +234,14 @@ function PostComposer({ onPosted }: { onPosted: () => void }) {
   );
 }
 
-function PostCard({ post, userId, author, onChange }: { post: Post; userId: string; author?: Author; onChange: () => void }) {
+function PostCard({ post, userId, isAdmin, author, onChange }: { post: Post; userId: string; isAdmin: boolean; author?: Author; onChange: () => void }) {
   const [counts, setCounts] = useState({ like: 0, view: 0, download: 0 });
   const [liked, setLiked] = useState(false);
+  const [showLikes, setShowLikes] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ description: post.description ?? "", subject: post.subject });
+  const { profile } = useAuth();
 
   useEffect(() => {
     supabase
@@ -256,6 +266,16 @@ function PostCard({ post, userId, author, onChange }: { post: Post; userId: stri
     } else {
       await supabase.from("post_interactions").upsert({ post_id: post.id, user_id: userId, kind: "like" }, { onConflict: "post_id,user_id,kind" });
       setLiked(true); setCounts((c) => ({ ...c, like: c.like + 1 }));
+      if (post.user_id !== userId) {
+        await supabase.from("notifications").insert({
+          user_id: post.user_id,
+          actor_id: userId,
+          kind: "like",
+          title: (profile?.name ?? "Someone") + " liked your post",
+          body: post.title,
+          link: "/dashboard",
+        });
+      }
     }
   };
 
@@ -267,6 +287,17 @@ function PostCard({ post, userId, author, onChange }: { post: Post; userId: stri
     onChange();
   };
 
+  const saveEdit = async () => {
+    const { error } = await supabase
+      .from("posts")
+      .update({ description: draft.description.trim() || null, subject: draft.subject.trim() || "General" })
+      .eq("id", post.id);
+    if (error) return toast.error(error.message);
+    toast.success("Post updated");
+    setEditing(false);
+    onChange();
+  };
+
   const media = (post.media_urls && post.media_urls.length > 0)
     ? post.media_urls
     : (post.file_url ? [{ url: post.file_url, type: post.file_type ?? "", name: post.title }] : []);
@@ -274,26 +305,49 @@ function PostCard({ post, userId, author, onChange }: { post: Post; userId: stri
   const files = media.filter((m) => !m.type.startsWith("image/"));
   const authorRole = author ? displayRole(author) : "Student";
   const isFounder = authorRole === "Founder";
+  const isOwner = post.user_id === userId;
+  const canEdit = isOwner;
+  const canDelete = isOwner || isAdmin;
 
   return (
     <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass overflow-hidden rounded-2xl">
       <header className="flex items-center gap-3 px-4 pt-4">
-        <div className="h-10 w-10 overflow-hidden rounded-full bg-muted">
+        <Link to={author ? "/u/" + author.roll : "/dashboard"} className="h-10 w-10 overflow-hidden rounded-full bg-muted">
           {author?.profile_photo ? <img src={author.profile_photo} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-sm font-bold text-secondary">{author?.name?.[0] ?? "?"}</div>}
-        </div>
+        </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <div className="truncate text-sm font-semibold">{author?.name ?? "Student"}</div>
+            <Link to={author ? "/u/" + author.roll : "/dashboard"} className="truncate text-sm font-semibold hover:underline">{author?.name ?? "Student"}</Link>
             {isFounder && <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/90 px-1.5 py-0.5 text-[9px] font-bold text-amber-950"><Crown className="h-2.5 w-2.5" /> Founder</span>}
           </div>
           <div className="text-[11px] text-foreground/60">{new Date(post.created_at).toLocaleString()} · {post.subject}</div>
         </div>
-        {post.user_id === userId && (
-          <button onClick={remove} className="grid h-8 w-8 place-items-center rounded-full text-foreground/50 hover:bg-muted/40 hover:text-red-400" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
-        )}
+        <PostMenu canEdit={canEdit} canDelete={canDelete} onEdit={() => setEditing(true)} onDelete={remove} />
       </header>
 
-      {post.description && <p className="px-4 pt-3 text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{post.description}</p>}
+      {editing ? (
+        <div className="space-y-2 px-4 pt-3">
+          <input
+            value={draft.subject}
+            onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
+            placeholder="Subject"
+            className="w-full rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
+          />
+          <textarea
+            value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            rows={3}
+            placeholder="Description"
+            className="w-full resize-none rounded-lg bg-muted/40 px-3 py-2 text-sm outline-none"
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => { setEditing(false); setDraft({ description: post.description ?? "", subject: post.subject }); }} className="rounded-lg px-3 py-1.5 text-xs">Cancel</button>
+            <button onClick={saveEdit} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">Save</button>
+          </div>
+        </div>
+      ) : (
+        post.description && <p className="px-4 pt-3 text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{post.description}</p>
+      )}
 
       {images.length > 0 && (
         <div className={"mt-3 grid gap-1 " + (images.length === 1 ? "grid-cols-1" : images.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
@@ -328,11 +382,18 @@ function PostCard({ post, userId, author, onChange }: { post: Post; userId: stri
 
       <footer className="mt-3 flex items-center gap-4 border-t border-border/40 px-4 py-2 text-xs text-foreground/70">
         <button onClick={toggleLike} className={"flex items-center gap-1.5 transition " + (liked ? "text-red-400" : "hover:text-red-400")}>
-          <Heart className={"h-4 w-4 " + (liked ? "fill-current" : "")} /> {counts.like}
+          <Heart className={"h-4 w-4 " + (liked ? "fill-current" : "")} />
+        </button>
+        <button onClick={() => setShowLikes(true)} className="hover:underline">{counts.like}</button>
+        <button onClick={() => setShowComments((v) => !v)} className="flex items-center gap-1.5 hover:text-foreground">
+          <MessageCircle className="h-4 w-4" /> Comment
         </button>
         <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {counts.view}</span>
         {files.length > 0 && <span className="ml-auto flex items-center gap-1.5"><Download className="h-4 w-4" /> {counts.download}</span>}
       </footer>
+
+      {showComments && <CommentsSection postId={post.id} postOwnerId={post.user_id} />}
+      {showLikes && <LikesModal postId={post.id} onClose={() => setShowLikes(false)} />}
     </motion.article>
   );
 }

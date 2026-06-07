@@ -22,7 +22,8 @@ type FormState = {
 };
 
 const emptyForm: FormState = {
-  name: "", roll: "", password: "", registration_number: "", session: "", batch: "",
+  name: "", roll: "", password: "", registration_number: "",
+  session: "2024-2025", batch: "08",
   blood_group: "", district: "", gender: "", facebook_link: "", profile_photo: "", phone: "",
   role: "student",
 };
@@ -215,6 +216,23 @@ export default function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+        <Link
+          to="/admin/add"
+          className="glass flex items-center justify-between rounded-2xl p-5 hover:bg-muted/30"
+          style={{ boxShadow: "0 0 30px var(--glow)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/30 text-primary">
+              <UserPlus className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold">Add Student / CR</div>
+              <div className="text-[11px] text-foreground/60">Open dedicated full-page form</div>
+            </div>
+          </div>
+          <ArrowLeft className="h-4 w-4 rotate-180 text-foreground/60" />
+        </Link>
+
         {/* Theme switcher (admin only) */}
         {isAdmin && (
         <section className="glass rounded-2xl p-5">

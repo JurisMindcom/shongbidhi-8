@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { CheckCircle2, Facebook, Crown, Shield, UserCog } from "lucide-react";
+import { CheckCircle2, Facebook, Crown, Shield, UserCog, ExternalLink } from "lucide-react";
 import type { Profile } from "@/lib/auth";
+import { Link } from "@/lib/navigation";
 
 export const FOUNDER_ROLL = "2426006";
 export type CardRole = "Admin" | "CR" | "Founder" | "Student";
@@ -110,6 +111,13 @@ export function StudentCard({
               <Facebook className="h-3.5 w-3.5" /> Send Friend Request
             </a>
           ) : null}
+          <Link
+            to={"/u/" + profile.roll}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-muted/60 px-2 py-1.5 text-[11px] font-semibold text-foreground transition hover:bg-muted"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Visit Profile
+          </Link>
         </div>
       </motion.div>
     </div>

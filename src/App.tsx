@@ -3,20 +3,24 @@ import { usePathname, Link } from "@/lib/navigation";
 import { Route as IndexRoute } from "./routes/index";
 import { Route as LoginRoute } from "./routes/login";
 import { Route as AdminRoute } from "./routes/admin";
+import { Route as AdminAddRoute } from "./routes/admin-add";
 import { Route as DashboardRoute } from "./routes/dashboard";
 import { Route as ProfileRoute } from "./routes/profile";
 import { Route as SettingsRoute } from "./routes/settings";
 import { Route as StudentsRoute } from "./routes/students";
+import { Route as NotesRoute } from "./routes/notes";
+import { Route as PublicProfileRoute } from "./routes/u";
 
 const routes: Record<string, { component: () => ReactElement }> = {
   "/": IndexRoute as never,
   "/login": LoginRoute as never,
   "/admin": AdminRoute as never,
+  "/admin/add": AdminAddRoute as never,
   "/dashboard": DashboardRoute as never,
   "/profile": ProfileRoute as never,
   "/settings": SettingsRoute as never,
   "/students": StudentsRoute as never,
-  "/notes": DashboardRoute as never,
+  "/notes": NotesRoute as never,
 };
 
 function NotFound() {
@@ -38,6 +42,11 @@ function NotFound() {
 
 export function App() {
   const path = usePathname();
+  // Public profile: /u/:roll
+  if (path.startsWith("/u/")) {
+    const Comp = (PublicProfileRoute as { component: () => ReactElement }).component;
+    return <Comp />;
+  }
   const match = routes[path];
   if (!match) return <NotFound />;
   const Component = (match as { component: () => ReactElement }).component;
