@@ -12,7 +12,6 @@ import { CommentsSection } from "@/components/CommentsSection";
 import { displayRole } from "@/components/StudentCard";
 import { Heart, Download, Eye, Image as ImageIcon, FileText, X, Send, Crown, Paperclip, ExternalLink, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth as useAuthCtx } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard" }] }),
@@ -242,7 +241,7 @@ function PostCard({ post, userId, isAdmin, author, onChange }: { post: Post; use
   const [showComments, setShowComments] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ description: post.description ?? "", subject: post.subject });
-  const { profile } = useAuthCtx();
+  const { profile } = useAuth();
 
   useEffect(() => {
     supabase
