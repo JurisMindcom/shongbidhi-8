@@ -22,7 +22,7 @@ export type Profile = {
 
 export type Role = "admin" | "cr" | "student";
 
-export type LoginMode = "admin" | "student";
+export type LoginMode = "admin" | "cr" | "student";
 
 type AuthCtx = {
   user: User | null;
@@ -35,7 +35,11 @@ type AuthCtx = {
   loginMode: LoginMode;
   setLoginMode: (m: LoginMode) => void;
   loading: boolean;
-  signInWithRoll: (roll: string, password: string) => Promise<{ error?: string }>;
+  signInWithRoll: (
+    roll: string,
+    password: string,
+    mode: LoginMode,
+  ) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -100,12 +104,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signInWithRoll = async (roll: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+  const signInWithRoll = async (
+    roll: string,
+    password: string,
+    mode: LoginMode,
+  ) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: rollToEmail(roll),
       password,
     });
-    if (error) return { error: error.message };
+    if (error || !data.user) return { error: error?.message ?? "Login failed" };
+    // Validate that the user's actual roles permit the chosen login mode.
+    const { data: r } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id);
+    const userRoles = ((r ?? []) as { role: Role }[]).map((x) => x.role);
+    const hasAdmin = userRoles.includes("admin");
+    const hasCR = userRoles.includes("cr");
+    const allowed =
+      mode === "student"
+        ? true
+        : mode === "cr"
+          ? hasCR || hasAdmin
+          : hasAdmin;
+    if (!allowed) {
+      await supabase.auth.signOut();
+      const label = mode === "admin" ? "Admin" : "CR";
+      return { error: `Your account is not authorized for ${label} login.` };
+    }
+    setLoginMode(mode);
     return {};
   };
 
@@ -124,10 +152,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         roles,
+        // Effective permissions = min(actual role, chosen login mode)
         isAdmin: roles.includes("admin") && loginMode === "admin",
-        isCR: roles.includes("cr"),
+        isCR:
+          (loginMode === "admin" && roles.includes("admin")) ||
+          (loginMode === "cr" && (roles.includes("cr") || roles.includes("admin"))),
         canManage:
-          (roles.includes("admin") && loginMode === "admin") || roles.includes("cr"),
+          (loginMode === "admin" && roles.includes("admin")) ||
+          (loginMode === "cr" && (roles.includes("cr") || roles.includes("admin"))),
         loginMode,
         setLoginMode,
         loading,
