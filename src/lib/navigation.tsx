@@ -41,6 +41,16 @@ export function usePathname() {
   return useContext(NavigationContext)?.path ?? "/";
 }
 
+/**
+ * Returns the trailing segment(s) of the path after the given prefix.
+ * Example: pattern "/u/" on path "/u/2426006" -> "2426006".
+ */
+export function useParam(prefix: string): string {
+  const path = usePathname();
+  if (!path.startsWith(prefix)) return "";
+  return decodeURIComponent(path.slice(prefix.length));
+}
+
 export function useRouter() {
   const navigate = useNavigate();
   return {
