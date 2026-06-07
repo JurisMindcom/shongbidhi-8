@@ -1,19 +1,41 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { CheckCircle2, Facebook, Crown } from "lucide-react";
+import { CheckCircle2, Facebook, Crown, Shield, UserCog } from "lucide-react";
 import type { Profile } from "@/lib/auth";
 
 export const FOUNDER_ROLL = "2426006";
-export const displayRole = (profile: Pick<Profile, "roll">) =>
-  profile.roll === FOUNDER_ROLL ? "Founder" : "Student";
+export type CardRole = "Admin" | "CR" | "Founder" | "Student";
+export const displayRole = (
+  profile: Pick<Profile, "roll">,
+  baseRole?: "admin" | "cr" | "student",
+): CardRole => {
+  if (profile.roll === FOUNDER_ROLL) return "Founder";
+  if (baseRole === "admin") return "Admin";
+  if (baseRole === "cr") return "CR";
+  return "Student";
+};
 
-export function StudentCard({ profile, serial }: { profile: Profile; serial?: number }) {
+export function StudentCard({
+  profile,
+  serial,
+  role: baseRole,
+}: {
+  profile: Profile;
+  serial?: number;
+  role?: "admin" | "cr" | "student";
+}) {
   const [flipped, setFlipped] = useState(false);
-  const role = displayRole(profile);
+  const role = displayRole(profile, baseRole);
   const isFounder = role === "Founder";
-  const badgeClass = isFounder
-    ? "rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-semibold text-amber-950 inline-flex items-center gap-1"
-    : "rounded-full bg-secondary/80 px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground inline-flex items-center gap-1";
+  const badgeClass =
+    role === "Founder"
+      ? "rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-semibold text-amber-950 inline-flex items-center gap-1"
+      : role === "Admin"
+        ? "rounded-full bg-rose-500/90 px-2 py-0.5 text-[10px] font-semibold text-rose-50 inline-flex items-center gap-1"
+        : role === "CR"
+          ? "rounded-full bg-sky-500/90 px-2 py-0.5 text-[10px] font-semibold text-sky-50 inline-flex items-center gap-1"
+          : "rounded-full bg-secondary/80 px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground inline-flex items-center gap-1";
+  const RoleIcon = role === "Founder" ? Crown : role === "Admin" ? Shield : role === "CR" ? UserCog : null;
   return (
     <div className="perspective-[1200px]" style={{ perspective: "1200px" }}>
       <motion.div
@@ -43,7 +65,7 @@ export function StudentCard({ profile, serial }: { profile: Profile; serial?: nu
             )}
           </div>
           <span className={badgeClass}>
-            {isFounder && <Crown className="h-3 w-3" />} {role}
+            {RoleIcon && <RoleIcon className="h-3 w-3" />} {role}
           </span>
           <div className="flex items-center gap-1 text-center text-sm font-semibold text-foreground">
             <span className="line-clamp-1">{profile.name}</span>
@@ -66,7 +88,7 @@ export function StudentCard({ profile, serial }: { profile: Profile; serial?: nu
             )}
           </div>
           <span className={"self-start " + badgeClass}>
-            {isFounder && <Crown className="h-3 w-3" />} {role}
+            {RoleIcon && <RoleIcon className="h-3 w-3" />} {role}
           </span>
           <div className="flex-1 space-y-1 text-xs leading-tight text-foreground/90">
             <div className="text-sm font-bold">{profile.name}</div>

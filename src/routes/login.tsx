@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import loginBg from "@/assets/login-bg.jpg";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { ArrowLeft, Lock, User, Shield, GraduationCap } from "lucide-react";
+import { ArrowLeft, Lock, User, Shield, GraduationCap, UserCog } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Login · Law & Land Administration" }] }),
@@ -13,14 +13,14 @@ export const Route = createFileRoute("/login")({
 });
 
 export default function LoginPage() {
-  const { signInWithRoll, user, isAdmin, isCR, loading, setLoginMode, loginMode } = useAuth();
+  const { signInWithRoll, user, isAdmin, isCR, loading, loginMode } = useAuth();
   const nav = useNavigate();
   const [roll, setRoll] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(true);
   const [step, setStep] = useState<"role" | "form">("role");
-  const [chosenMode, setChosenMode] = useState<"admin" | "student">(loginMode);
+  const [chosenMode, setChosenMode] = useState<"admin" | "cr" | "student">(loginMode);
 
   useEffect(() => {
     if (!loading && user) nav(isAdmin || isCR ? "/admin" : "/dashboard");
@@ -29,8 +29,7 @@ export default function LoginPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setLoginMode(chosenMode);
-    const { error } = await signInWithRoll(roll, password);
+    const { error } = await signInWithRoll(roll, password, chosenMode);
     setSubmitting(false);
     if (error) return toast.error(error);
     try {
@@ -64,9 +63,10 @@ export default function LoginPage() {
               <h1 className="text-2xl font-bold">Choose your role</h1>
               <p className="text-xs text-foreground/70">Select how you want to sign in</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {([
                 { key: "admin", label: "Admin", icon: Shield, desc: "Full control" },
+                { key: "cr", label: "CR", icon: UserCog, desc: "Class rep" },
                 { key: "student", label: "Student", icon: GraduationCap, desc: "Student portal" },
               ] as const).map((r) => {
                 const active = chosenMode === r.key;
@@ -76,15 +76,15 @@ export default function LoginPage() {
                     key={r.key}
                     type="button"
                     onClick={() => setChosenMode(r.key)}
-                    className={`flex flex-col items-center gap-2 rounded-2xl p-4 text-center transition ${
+                    className={`flex flex-col items-center gap-1.5 rounded-2xl p-3 text-center transition ${
                       active
                         ? "bg-primary text-primary-foreground glow-ring"
                         : "bg-muted/40 text-foreground hover:bg-muted/60"
                     }`}
                   >
-                    <Icon className="h-7 w-7" />
-                    <div className="text-sm font-bold">{r.label}</div>
-                    <div className="text-[11px] opacity-80">{r.desc}</div>
+                    <Icon className="h-6 w-6" />
+                    <div className="text-xs font-bold">{r.label}</div>
+                    <div className="text-[10px] opacity-80">{r.desc}</div>
                   </button>
                 );
               })}
@@ -94,10 +94,10 @@ export default function LoginPage() {
               className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
               style={{ boxShadow: "0 0 30px var(--glow)" }}
             >
-              Continue as {chosenMode === "admin" ? "Admin" : "Student"}
+              Continue as {chosenMode === "admin" ? "Admin" : chosenMode === "cr" ? "CR" : "Student"}
             </button>
             <p className="text-center text-[11px] text-foreground/60">
-              Admin accounts can sign in as either role.
+              Admin can sign in via any role. CR can sign in as CR or Student.
             </p>
           </motion.div>
         ) : (
@@ -110,7 +110,7 @@ export default function LoginPage() {
         >
           <div className="text-center">
             <div className="mx-auto mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted/40 px-3 py-1 text-[11px] uppercase tracking-wide">
-              {chosenMode === "admin" ? <Shield className="h-3 w-3" /> : <GraduationCap className="h-3 w-3" />}
+              {chosenMode === "admin" ? <Shield className="h-3 w-3" /> : chosenMode === "cr" ? <UserCog className="h-3 w-3" /> : <GraduationCap className="h-3 w-3" />}
               {chosenMode} login
             </div>
             <h1 className="text-2xl font-bold">Welcome back</h1>

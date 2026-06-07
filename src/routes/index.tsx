@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@/lib/navigation";
+import { createFileRoute, Link, Navigate } from "@/lib/navigation";
 import { motion } from "framer-motion";
 import { FloatingNav } from "@/components/FloatingNav";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
@@ -6,6 +6,7 @@ import { FloatingParticles } from "@/components/FloatingParticles";
 import cover from "@/assets/cover.jpg";
 import logo from "@/assets/logo.png";
 import { Scale, BookOpen, Sparkles, Award, Heart, Users, ArrowRight } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,6 +28,10 @@ export const Route = createFileRoute("/")({
 });
 
 export default function Home() {
+  const { user, loading, isAdmin, isCR } = useAuth();
+  if (!loading && user) {
+    return <Navigate to={isAdmin || isCR ? "/admin" : "/dashboard"} />;
+  }
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* HERO */}
