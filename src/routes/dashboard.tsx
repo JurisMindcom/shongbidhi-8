@@ -10,6 +10,8 @@ import { PostMenu } from "@/components/PostMenu";
 import { LikesModal } from "@/components/LikesModal";
 import { CommentsSection } from "@/components/CommentsSection";
 import { displayRole } from "@/components/StudentCard";
+import { useCompose } from "@/lib/compose";
+import { downloadFile } from "@/lib/download";
 import { Heart, Download, Eye, Image as ImageIcon, FileText, X, Send, Crown, Paperclip, ExternalLink, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,10 +39,24 @@ function Dashboard() {
   const nav = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [authors, setAuthors] = useState<Record<string, Author>>({});
+  const compose = useCompose();
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/login" });
   }, [loading, user, nav]);
+
+  // Honor /dashboard?compose=1 as an explicit signal to open the share modal.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("compose") === "1") {
+      compose.open();
+      sp.delete("compose");
+      const url = window.location.pathname + (sp.toString() ? "?" + sp.toString() : "");
+      window.history.replaceState({}, "", url);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadPosts = async () => {
     const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
@@ -373,7 +389,14 @@ function PostCard({ post, userId, isAdmin, author, onChange }: { post: Post; use
                   <div className="text-[11px] text-foreground/60 uppercase">{isPdf ? "PDF" : (m.type.split("/").pop() || "File")}</div>
                 </div>
                 <a href={m.url} target="_blank" rel="noreferrer" className="grid h-9 w-9 place-items-center rounded-lg bg-muted/60 hover:bg-muted" aria-label="Open"><ExternalLink className="h-4 w-4" /></a>
-                <a href={m.url} download className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground" aria-label="Download"><Download className="h-4 w-4" /></a>
+                <button
+                  type="button"
+                  onClick={() => { downloadFile(m.url, m.name); supabase.from("post_interactions").upsert({ post_id: post.id, user_id: userId, kind: "download" }, { onConflict: "post_id,user_id,kind" }); }}
+                  className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground"
+                  aria-label="Download"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
               </div>
             );
           })}

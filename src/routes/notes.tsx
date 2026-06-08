@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { FileText, Image as ImageIcon, Download, Search, ExternalLink } from "lucide-react";
+import { downloadFile } from "@/lib/download";
 
 export const Route = createFileRoute("/notes")({ component: NotesPage });
 
@@ -143,13 +144,13 @@ export default function NotesPage() {
                       >
                         <ExternalLink className="h-3 w-3" /> Open
                       </a>
-                      <a
-                        href={media.url}
-                        download
+                      <button
+                        type="button"
+                        onClick={() => downloadFile(media.url, media.name)}
                         className="flex flex-1 items-center justify-center gap-1 rounded-md bg-primary py-1 text-[10px] font-bold text-primary-foreground"
                       >
                         <Download className="h-3 w-3" /> Save
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>
