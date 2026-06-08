@@ -83,12 +83,12 @@ export default function PublicProfilePage() {
     <div className="relative min-h-screen bg-background pb-24">
       <DashboardHeader title="Profile" />
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
-        <button
-          onClick={() => window.history.length > 1 ? window.history.back() : nav("/students")}
+        <Link
+          to="/dashboard"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/80 hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
+          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+        </Link>
 
         <section className="glass rounded-3xl p-6 text-center">
           <div className="mx-auto h-28 w-28 overflow-hidden rounded-full bg-muted ring-4 ring-primary/40">

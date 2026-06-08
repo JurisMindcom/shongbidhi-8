@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@/lib/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { HamburgerMenu } from "@/components/HamburgerMenu";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { BottomNav } from "@/components/BottomNav";
 import { displayRole } from "@/components/StudentCard";
 import { Crown, ArrowLeft, Settings as SettingsIcon } from "lucide-react";
 
@@ -29,13 +30,13 @@ function ProfilePage() {
   const role = displayRole(profile);
   const isFounder = role === "Founder";
   return (
-    <div className="relative min-h-screen bg-background pb-20">
-      <HamburgerMenu />
-      <header className="flex items-center justify-between px-4 py-3 pl-16">
-        <Link to="/dashboard" className="flex items-center gap-2 text-sm font-semibold"><ArrowLeft className="h-4 w-4" /> Back</Link>
-        <Link to="/settings" className="glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"><SettingsIcon className="h-3.5 w-3.5" /> Edit</Link>
-      </header>
-      <main className="mx-auto max-w-2xl space-y-4 px-4">
+    <div className="relative min-h-screen bg-background pb-24">
+      <DashboardHeader title="My Profile" />
+      <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
+        <div className="flex items-center justify-between">
+          <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold"><ArrowLeft className="h-4 w-4" /> Back</Link>
+          <Link to="/settings" className="glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"><SettingsIcon className="h-3.5 w-3.5" /> Edit</Link>
+        </div>
         <div className="glass rounded-3xl p-6 text-center">
           <div className="mx-auto h-32 w-32 overflow-hidden rounded-full bg-muted ring-4 ring-primary/40">
             {profile.profile_photo ? (
@@ -61,6 +62,7 @@ function ProfilePage() {
           <Info label="Gender" v={profile.gender} />
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }

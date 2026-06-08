@@ -10,6 +10,7 @@ import { Route as SettingsRoute } from "./routes/settings";
 import { Route as StudentsRoute } from "./routes/students";
 import { Route as NotesRoute } from "./routes/notes";
 import { Route as PublicProfileRoute } from "./routes/u";
+import { Route as NotificationsRoute } from "./routes/notifications";
 
 const routes: Record<string, { component: () => ReactElement }> = {
   "/": IndexRoute as never,
@@ -21,6 +22,7 @@ const routes: Record<string, { component: () => ReactElement }> = {
   "/settings": SettingsRoute as never,
   "/students": StudentsRoute as never,
   "/notes": NotesRoute as never,
+  "/notifications": NotificationsRoute as never,
 };
 
 function NotFound() {

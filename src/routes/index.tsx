@@ -28,9 +28,10 @@ export const Route = createFileRoute("/")({
 });
 
 export default function Home() {
-  const { user, loading, isAdmin, isCR } = useAuth();
+  const { user, loading } = useAuth();
   if (!loading && user) {
-    return <Navigate to={isAdmin || isCR ? "/admin" : "/dashboard"} />;
+    // Always land on Dashboard. Admin/CR panels are opened from the menu, not auto-redirected.
+    return <Navigate to="/dashboard" />;
   }
   return (
     <div className="min-h-screen bg-background text-foreground">

@@ -1,10 +1,13 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { CheckCircle2, Facebook, Crown, Shield, UserCog, ExternalLink } from "lucide-react";
+import { CheckCircle2, Facebook, Crown, Shield, UserCog, ExternalLink, RotateCw } from "lucide-react";
 import type { Profile } from "@/lib/auth";
 import { Link } from "@/lib/navigation";
+import { setActiveCard, useActiveCard } from "@/lib/active-card";
 
 export const FOUNDER_ROLL = "2426006";
+/** Rolls that should always display the "CR" role label regardless of stored role. */
+export const STATIC_CR_ROLLS = new Set<string>(["2426008"]);
+
 export type CardRole = "Admin" | "CR" | "Founder" | "Student";
 export const displayRole = (
   profile: Pick<Profile, "roll">,
@@ -12,22 +15,22 @@ export const displayRole = (
 ): CardRole => {
   if (profile.roll === FOUNDER_ROLL) return "Founder";
   if (baseRole === "admin") return "Admin";
-  if (baseRole === "cr") return "CR";
+  if (baseRole === "cr" || STATIC_CR_ROLLS.has(profile.roll)) return "CR";
   return "Student";
 };
 
 export function StudentCard({
   profile,
-  serial,
   role: baseRole,
 }: {
   profile: Profile;
+  /** @deprecated serial numbering removed */
   serial?: number;
   role?: "admin" | "cr" | "student";
 }) {
-  const [flipped, setFlipped] = useState(false);
+  const { activeId } = useActiveCard();
+  const flipped = activeId === profile.id;
   const role = displayRole(profile, baseRole);
-  const isFounder = role === "Founder";
   const badgeClass =
     role === "Founder"
       ? "rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-semibold text-amber-950 inline-flex items-center gap-1"
@@ -44,18 +47,21 @@ export function StudentCard({
         style={{ transformStyle: "preserve-3d" }}
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.7, type: "spring" }}
-        onClick={() => setFlipped((f) => !f)}
+        onClick={() => setActiveCard(flipped ? null : profile.id)}
       >
         {/* FRONT */}
         <div
-          className="glass absolute inset-0 flex flex-col items-center gap-2 rounded-2xl p-3"
-          style={{ backfaceVisibility: "hidden" }}
+          className="glass absolute inset-0 flex flex-col items-center gap-2 rounded-2xl p-3 transition-opacity"
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", opacity: flipped ? 0 : 1 }}
         >
-          {typeof serial === "number" && (
-            <span className="absolute left-2 top-2 z-10 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow">
-              #{serial}
-            </span>
-          )}
+          {/* Tap indicator */}
+          <span
+            aria-hidden
+            className="absolute right-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white shadow ring-1 ring-white/20 backdrop-blur"
+            title="Tap to flip"
+          >
+            <RotateCw className="h-3 w-3" />
+          </span>
           <div className="relative h-[72%] w-full overflow-hidden rounded-xl bg-muted">
             {profile.profile_photo ? (
               <img src={profile.profile_photo} alt={profile.name} className="h-full w-full object-cover" />
@@ -77,28 +83,23 @@ export function StudentCard({
         {/* BACK */}
         <div
           className="glass absolute inset-0 flex flex-col gap-2 rounded-2xl p-3"
-          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
-          <div className="relative h-[55%] w-full overflow-hidden rounded-xl bg-muted">
-            {profile.profile_photo ? (
-              <img src={profile.profile_photo} alt={profile.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-secondary">
-                {profile.name?.[0] ?? "?"}
-              </div>
-            )}
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-bold">{profile.name}</div>
+              <div className="text-[10px] text-foreground/60">{profile.department}</div>
+            </div>
+            <span className={badgeClass}>
+              {RoleIcon && <RoleIcon className="h-3 w-3" />} {role}
+            </span>
           </div>
-          <span className={"self-start " + badgeClass}>
-            {RoleIcon && <RoleIcon className="h-3 w-3" />} {role}
-          </span>
-          <div className="flex-1 space-y-1 text-xs leading-tight text-foreground/90">
-            <div className="text-sm font-bold">{profile.name}</div>
-            {typeof serial === "number" && (
-              <div>Serial: <span className="text-secondary">#{serial}</span></div>
-            )}
-            <div>Roll: <span className="text-secondary">{profile.roll}</span></div>
-            <div>District: <span className="text-secondary">{profile.district ?? "-"}</span></div>
-            <div>Blood: <span className="text-secondary">{profile.blood_group ?? "-"}</span></div>
+          <div className="flex-1 space-y-1.5 text-xs leading-tight text-foreground/90">
+            <Row label="Role" value={role} />
+            <Row label="Roll" value={profile.roll} />
+            <Row label="District" value={profile.district ?? "—"} />
+            <Row label="Blood" value={profile.blood_group ?? "—"} />
+            <Row label="Session" value={profile.session ?? "2024-2025"} />
           </div>
           {profile.facebook_link ? (
             <a
@@ -120,6 +121,15 @@ export function StudentCard({
           </Link>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="text-[10px] uppercase tracking-wide text-foreground/55">{label}</span>
+      <span className="truncate text-right font-semibold text-secondary">{value}</span>
     </div>
   );
 }
