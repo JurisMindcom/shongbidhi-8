@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, usePathname, useRouter } from "@/lib/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Home, LayoutDashboard, Users, BookOpen, Settings, User as UserIcon, LogOut, Shield } from "lucide-react";
+import { Menu, X, Home, LayoutDashboard, Users, BookOpen, Settings, User as UserIcon, LogOut, Shield, UserCog, Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 type Item = { to: string; label: string; icon: typeof Home; auth?: boolean };
@@ -10,13 +10,14 @@ const items: Item[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, auth: true },
   { to: "/students", label: "Students", icon: Users },
   { to: "/notes", label: "Notes", icon: BookOpen, auth: true },
+  { to: "/notifications", label: "Notifications", icon: Bell, auth: true },
   { to: "/profile", label: "Profile", icon: UserIcon, auth: true },
   { to: "/settings", label: "Settings", icon: Settings, auth: true },
 ];
 
-export function HamburgerMenu() {
+export function HamburgerMenu({ inline = false }: { inline?: boolean }) {
   const [open, setOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isCR, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -29,9 +30,13 @@ export function HamburgerMenu() {
       <button
         aria-label="Open menu"
         onClick={() => setOpen(true)}
-        className="glass fixed left-3 top-3 z-40 grid h-10 w-10 place-items-center rounded-full text-foreground hover:scale-105 transition"
+        className={
+          inline
+            ? "grid h-9 w-9 place-items-center rounded-full bg-muted/40 text-foreground hover:bg-muted/60"
+            : "glass fixed left-3 top-3 z-40 grid h-10 w-10 place-items-center rounded-full text-foreground hover:scale-105 transition"
+        }
       >
-        <Menu className="h-5 w-5" />
+        <Menu className={inline ? "h-4 w-4" : "h-5 w-5"} />
       </button>
       <AnimatePresence>
         {open && (
@@ -44,9 +49,9 @@ export function HamburgerMenu() {
             />
             <motion.aside
               key="panel"
-              initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 280, damping: 32 }}
-              className="glass fixed left-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col gap-1 p-4"
+              className="glass fixed right-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col gap-1 p-4"
             >
               <div className="mb-2 flex items-center justify-between">
                 <div className="text-sm font-bold text-gradient">Menu</div>
@@ -71,6 +76,11 @@ export function HamburgerMenu() {
               {isAdmin && (
                 <Link to="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-amber-400 hover:bg-muted/50">
                   <Shield className="h-4 w-4" /> Admin Panel
+                </Link>
+              )}
+              {isCR && !isAdmin && (
+                <Link to="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-sky-300 hover:bg-muted/50">
+                  <UserCog className="h-4 w-4" /> CR Panel
                 </Link>
               )}
               <div className="mt-auto">

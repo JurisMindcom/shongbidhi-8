@@ -1,6 +1,7 @@
 import { Link, usePathname } from "@/lib/navigation";
 import { Home, Users, BookOpen, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useCompose } from "@/lib/compose";
 
 const tabs = [
   { to: "/dashboard", label: "Home", icon: Home },
@@ -11,6 +12,7 @@ const tabs = [
 export function BottomNav() {
   const { profile, user } = useAuth();
   const path = usePathname();
+  const compose = useCompose();
   if (!user) return null;
 
   return (
@@ -19,15 +21,15 @@ export function BottomNav() {
         <Tab to="/dashboard" label="Home" Icon={Home} active={path === "/dashboard"} />
         <Tab to="/students" label="Students" Icon={Users} active={path === "/students"} />
 
-        {/* Center Upload FAB */}
-        <Link
-          to="/dashboard?compose=1"
-          aria-label="Create post"
+        {/* Center Upload FAB — opens global compose modal */}
+        <button
+          onClick={() => compose.open()}
+          aria-label="Share a note, file, or photo"
           className="-mt-6 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-background transition active:scale-95"
           style={{ boxShadow: "0 0 30px var(--glow)" }}
         >
           <Plus className="h-7 w-7" />
-        </Link>
+        </button>
 
         <Tab to="/notes" label="Notes" Icon={BookOpen} active={path === "/notes"} />
 

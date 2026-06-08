@@ -1,8 +1,9 @@
 import { Link } from "@/lib/navigation";
 import logo from "@/assets/logo.png";
 import { NotificationBell } from "./NotificationBell";
+import { HamburgerMenu } from "./HamburgerMenu";
 
-export function DashboardHeader({ title }: { title?: string }) {
+export function DashboardHeader({ title, showBell = true, showMenu = true }: { title?: string; showBell?: boolean; showMenu?: boolean }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
@@ -21,8 +22,9 @@ export function DashboardHeader({ title }: { title?: string }) {
             </div>
           </div>
         </Link>
-        <div className="ml-auto">
-          <NotificationBell />
+        <div className="ml-auto flex items-center gap-2">
+          {showBell && <NotificationBell />}
+          {showMenu && <HamburgerMenu inline />}
         </div>
       </div>
     </header>
