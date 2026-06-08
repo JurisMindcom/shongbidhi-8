@@ -43,14 +43,11 @@ function StudentsPage() {
         .select("user_id, role")
         .then(({ data }) => {
           if (!active) return;
+          const rank = { student: 0, cr: 1, admin: 2 } as const;
           const m: Record<string, "admin" | "cr" | "student"> = {};
           ((data ?? []) as { user_id: string; role: "admin" | "cr" | "student" }[]).forEach((r) => {
             const prev = m[r.user_id];
-            // admin > cr > student precedence
-            if (prev === "admin") return;
-            if (r.role === "admin") m[r.user_id] = "admin";
-            else if (r.role === "cr" && prev !== "admin") m[r.user_id] = "cr";
-            else if (!prev) m[r.user_id] = "student";
+            if (!prev || rank[r.role] > rank[prev]) m[r.user_id] = r.role;
           });
           setRoleMap(m);
         });
