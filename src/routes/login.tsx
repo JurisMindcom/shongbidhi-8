@@ -23,8 +23,9 @@ export default function LoginPage() {
   const [chosenMode, setChosenMode] = useState<"admin" | "cr" | "student">(loginMode);
 
   useEffect(() => {
-    if (!loading && user) nav(isAdmin || isCR ? "/admin" : "/dashboard");
-  }, [user, isAdmin, isCR, loading, nav]);
+    // After login always go to Dashboard. Admin / CR open their panel via the menu.
+    if (!loading && user) nav("/dashboard");
+  }, [user, loading, nav]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,12 +45,16 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-background/80 via-background/60 to-background/90 backdrop-blur-sm" />
       <FloatingParticles count={24} />
 
-      <Link
-        to="/"
+      <button
+        type="button"
+        onClick={() => {
+          if (step === "form") setStep("role");
+          else nav("/");
+        }}
         className="glass absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full px-3 py-2 text-xs"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Home
-      </Link>
+        <ArrowLeft className="h-3.5 w-3.5" /> {step === "form" ? "Back" : "Home"}
+      </button>
 
       <div className="relative z-10 flex min-h-[100svh] items-center justify-center px-4 py-10">
         {step === "role" ? (

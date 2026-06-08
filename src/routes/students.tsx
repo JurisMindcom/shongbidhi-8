@@ -5,6 +5,9 @@ import type { Profile } from "@/lib/auth";
 import { StudentCard } from "@/components/StudentCard";
 import { FloatingParticles } from "@/components/FloatingParticles";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { BottomNav } from "@/components/BottomNav";
+import { useAuth } from "@/lib/auth";
 import studentsCover from "@/assets/students-cover.jpg";
 import { ArrowLeft, Search } from "lucide-react";
 
@@ -22,8 +25,9 @@ type SortKey = "roll" | "name";
 type GenderFilter = "all" | "Male" | "Female";
 
 function StudentsPage() {
+  const { user } = useAuth();
   const [students, setStudents] = useState<Profile[]>([]);
-  const [nonStudentIds, setNonStudentIds] = useState<Set<string>>(new Set());
+  const [roleMap, setRoleMap] = useState<Record<string, "admin" | "cr" | "student">>({});
   const [query, setQuery] = useState("");
   const [gender, setGender] = useState<GenderFilter>("all");
   const [sort, setSort] = useState<SortKey>("roll");
@@ -33,12 +37,28 @@ function StudentsPage() {
 
   useEffect(() => {
     let active = true;
+    const loadRoles = () =>
+      supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .then(({ data }) => {
+          if (!active) return;
+          const m: Record<string, "admin" | "cr" | "student"> = {};
+          ((data ?? []) as { user_id: string; role: "admin" | "cr" | "student" }[]).forEach((r) => {
+            const prev = m[r.user_id];
+            // admin > cr > student precedence
+            if (prev === "admin") return;
+            if (r.role === "admin") m[r.user_id] = "admin";
+            else if (r.role === "cr" && prev !== "admin") m[r.user_id] = "cr";
+            else if (!prev) m[r.user_id] = "student";
+          });
+          setRoleMap(m);
+        });
     Promise.all([
       supabase.from("profiles").select("*").eq("status", "active").order("roll", { ascending: true }),
-      supabase.from("user_roles").select("user_id, role").in("role", ["admin", "cr"]),
-    ]).then(([{ data: profs }, { data: roles }]) => {
+      loadRoles(),
+    ]).then(([{ data: profs }]) => {
       if (!active) return;
-      setNonStudentIds(new Set(((roles ?? []) as { user_id: string }[]).map((r) => r.user_id)));
       setStudents((profs as Profile[]) ?? []);
       setLoading(false);
     });
@@ -60,15 +80,7 @@ function StudentsPage() {
       .subscribe();
     const rolesChannel = supabase
       .channel("user-roles-public")
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => {
-        supabase
-          .from("user_roles")
-          .select("user_id, role")
-          .in("role", ["admin", "cr"])
-          .then(({ data }) =>
-            setNonStudentIds(new Set(((data ?? []) as { user_id: string }[]).map((r) => r.user_id))),
-          );
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => loadRoles())
       .subscribe();
     return () => {
       active = false;
@@ -80,7 +92,8 @@ function StudentsPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out = students.filter((s) => {
-      if (nonStudentIds.has(s.id)) return false;
+      // Exclude admins from listing. CRs are part of the class — keep them visible.
+      if (roleMap[s.id] === "admin") return false;
       if (gender !== "all" && s.gender !== gender) return false;
       if (!q) return true;
       return (
@@ -94,16 +107,7 @@ function StudentsPage() {
       sort === "name" ? a.name.localeCompare(b.name) : a.roll.localeCompare(b.roll),
     );
     return out;
-  }, [students, query, gender, sort, nonStudentIds]);
-
-  // Global serial map based on Roll Number ascending, students only
-  const serialByRoll = useMemo(() => {
-    const onlyStudents = students.filter((s) => !nonStudentIds.has(s.id));
-    onlyStudents.sort((a, b) => a.roll.localeCompare(b.roll));
-    const map = new Map<string, number>();
-    onlyStudents.forEach((s, i) => map.set(s.id, i + 1));
-    return map;
-  }, [students, nonStudentIds]);
+  }, [students, query, gender, sort, roleMap]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -113,15 +117,21 @@ function StudentsPage() {
   }, [pageCount, page]);
 
   return (
-    <div className="relative min-h-screen bg-background pb-16">
+    <div className="relative min-h-screen bg-background pb-24">
       <FloatingParticles count={14} />
-      <HamburgerMenu />
-      <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 py-3">
-        <Link to="/" className="ml-12 flex items-center gap-2 text-sm font-semibold">
-          <ArrowLeft className="h-4 w-4" /> Home
-        </Link>
-        <span className="text-xs text-foreground/70">{filtered.length} students</span>
-      </header>
+      {user ? (
+        <DashboardHeader title="Students" />
+      ) : (
+        <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
+            <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
+              <ArrowLeft className="h-4 w-4" /> Home
+            </Link>
+            <span className="ml-auto text-xs text-foreground/70">{filtered.length} students</span>
+            <HamburgerMenu inline />
+          </div>
+        </header>
+      )}
 
       <section className="relative mx-auto mt-4 max-w-7xl px-4">
         <div className="relative h-40 overflow-hidden rounded-3xl sm:h-56">
@@ -180,7 +190,7 @@ function StudentsPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {visible.map((s) => (
-              <StudentCard key={s.id} profile={s} serial={serialByRoll.get(s.id)} />
+              <StudentCard key={s.id} profile={s} role={roleMap[s.id] ?? "student"} />
             ))}
           </div>
         )}
@@ -207,6 +217,7 @@ function StudentsPage() {
           </div>
         )}
       </section>
+      {user && <BottomNav />}
     </div>
   );
 }

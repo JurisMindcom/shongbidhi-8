@@ -5,8 +5,10 @@ import { useTheme, type ThemeName } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FloatingParticles } from "@/components/FloatingParticles";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { BottomNav } from "@/components/BottomNav";
 import {
-  LogOut, Trash2, UserPlus, Palette, ArrowLeft, Upload, X,
+  Trash2, UserPlus, Palette, ArrowLeft, Upload, X,
   Pencil, Pause, Play, Search,
 } from "lucide-react";
 import type { Profile } from "@/lib/auth";
@@ -80,7 +82,7 @@ async function adminSetStatus(id: string, status: "active" | "suspended") {
 }
 
 export default function AdminPage() {
-  const { user, isAdmin, isCR, loading, signOut } = useAuth();
+  const { user, isAdmin, isCR, loading } = useAuth();
   const { theme, setTheme } = useTheme();
   const nav = useNavigate();
   const [students, setStudents] = useState<Profile[]>([]);
@@ -203,19 +205,14 @@ export default function AdminPage() {
   if (!canAccess) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
 
   return (
-    <div className="relative min-h-screen bg-background pb-12">
+    <div className="relative min-h-screen bg-background pb-24">
       <FloatingParticles count={10} />
-      <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Link to="/" className="rounded-full bg-muted/40 p-2"><ArrowLeft className="h-4 w-4" /></Link>
-          <h1 className="text-lg font-bold">{isAdmin ? "Admin Dashboard" : "CR Dashboard"}</h1>
-        </div>
-        <button onClick={signOut} className="rounded-full bg-primary/80 px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-          <LogOut className="inline h-3.5 w-3.5" />
-        </button>
-      </header>
+      <DashboardHeader title={isAdmin ? "Admin Panel" : "CR Panel"} />
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+        <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/80 hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+        </Link>
         <Link
           to="/admin/add"
           className="glass flex items-center justify-between rounded-2xl p-5 hover:bg-muted/30"
@@ -422,6 +419,7 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      <BottomNav />
     </div>
   );
 }
