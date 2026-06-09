@@ -53,8 +53,19 @@ function SettingsPage() {
   };
 
   const saveDetails = async () => {
+    const fbTrim = fb.trim();
+    if (fbTrim) {
+      try {
+        const u = new URL(fbTrim);
+        if (u.protocol !== "https:" && u.protocol !== "http:") {
+          return toast.error("Facebook link must be a valid http(s) URL");
+        }
+      } catch {
+        return toast.error("Facebook link must be a valid URL");
+      }
+    }
     const { error } = await supabase.from("profiles").update({
-      nickname: nick || null, session: session || null, phone: phone || null, facebook_link: fb || null,
+      nickname: nick || null, session: session || null, phone: phone || null, facebook_link: fbTrim || null,
     }).eq("id", profile.id);
     if (error) return toast.error(error.message);
     toast.success("Saved");

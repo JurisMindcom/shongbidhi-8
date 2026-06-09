@@ -3,6 +3,7 @@ import { CheckCircle2, Facebook, Crown, Shield, UserCog, ExternalLink } from "lu
 import type { Profile } from "@/lib/auth";
 import { Link } from "@/lib/navigation";
 import { setActiveCard, useActiveCard } from "@/lib/active-card";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 export const FOUNDER_ROLL = "2426006";
 /** Rolls that should always display the "CR" role label regardless of stored role. */
@@ -101,11 +102,11 @@ export function StudentCard({
             <Row label="Blood" value={profile.blood_group ?? "—"} />
             <Row label="Session" value={profile.session ?? "2024-2025"} />
           </div>
-          {profile.facebook_link ? (
+          {safeHttpUrl(profile.facebook_link) ? (
             <a
-              href={profile.facebook_link}
+              href={safeHttpUrl(profile.facebook_link)!}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-1.5 text-[11px] font-semibold text-primary-foreground transition hover:opacity-90"
             >

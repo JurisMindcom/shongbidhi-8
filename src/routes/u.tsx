@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { displayRole } from "@/components/StudentCard";
 import { useAuth } from "@/lib/auth";
+import { safeHttpUrl } from "@/lib/safe-url";
 import { ArrowLeft, Crown, Shield, UserCog, Facebook } from "lucide-react";
 
 export const Route = createFileRoute("/u/:roll")({ component: PublicProfilePage });
@@ -112,11 +113,11 @@ export default function PublicProfilePage() {
             <Info label="Blood" v={profile.blood_group} />
             <Info label="Gender" v={profile.gender} />
           </div>
-          {profile.facebook_link && (
+          {safeHttpUrl(profile.facebook_link) && (
             <a
-              href={profile.facebook_link}
+              href={safeHttpUrl(profile.facebook_link)!}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
             >
               <Facebook className="h-3.5 w-3.5" /> Send Friend Request
