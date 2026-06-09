@@ -34,6 +34,18 @@ const clean = (v?: string | null) => {
   return t.length ? t : null;
 };
 
+const cleanUrl = (v?: string | null) => {
+  const t = clean(v);
+  if (!t) return null;
+  try {
+    const u = new URL(t);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
@@ -114,8 +126,8 @@ Deno.serve(async (req) => {
     district: clean(body.district),
     gender: body.gender,
     phone: clean(body.phone),
-    facebook_link: clean(body.facebook_link),
-    profile_photo: clean(body.profile_photo),
+    facebook_link: cleanUrl(body.facebook_link),
+    profile_photo: cleanUrl(body.profile_photo),
     status: "active",
   });
   if (profileErr) {
