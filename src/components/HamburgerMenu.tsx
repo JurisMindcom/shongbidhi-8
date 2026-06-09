@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Link, usePathname, useRouter } from "@/lib/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Home, LayoutDashboard, Users, BookOpen, Settings, User as UserIcon, LogOut, Shield, UserCog, Bell } from "lucide-react";
@@ -17,9 +18,14 @@ const items: Item[] = [
 
 export function HamburgerMenu({ inline = false }: { inline?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { user, isAdmin, isCR, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setOpen(false);
@@ -38,21 +44,21 @@ export function HamburgerMenu({ inline = false }: { inline?: boolean }) {
       >
         <Menu className={inline ? "h-4 w-4" : "h-5 w-5"} />
       </button>
-      <AnimatePresence>
+      {mounted && createPortal(<AnimatePresence>
         {open && (
           <>
             <motion.div
               key="bg"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[9998] bg-black/70"
               onClick={() => setOpen(false)}
             />
             <motion.aside
               key="panel"
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 280, damping: 32 }}
-              className="fixed right-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col gap-1 border-l border-border bg-background p-4 text-foreground shadow-2xl"
-              style={{ backgroundColor: "var(--background)" }}
+              className="fixed bottom-0 right-0 top-0 z-[9999] isolate flex h-dvh w-72 max-w-[85vw] flex-col gap-1 border-l border-sidebar-border bg-sidebar p-4 text-sidebar-foreground shadow-2xl"
+              style={{ backgroundColor: "var(--sidebar)" }}
             >
               <div className="mb-2 flex items-center justify-between">
                 <div className="text-sm font-bold text-gradient">Menu</div>
@@ -101,7 +107,7 @@ export function HamburgerMenu({ inline = false }: { inline?: boolean }) {
             </motion.aside>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
     </>
   );
 }
