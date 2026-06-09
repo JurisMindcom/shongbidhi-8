@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { displayRole } from "@/components/StudentCard";
 import { useAuth } from "@/lib/auth";
+import { safeHttpUrl } from "@/lib/safe-url";
 import { ArrowLeft, Crown, Shield, UserCog, Facebook } from "lucide-react";
 
 export const Route = createFileRoute("/u/:roll")({ component: PublicProfilePage });

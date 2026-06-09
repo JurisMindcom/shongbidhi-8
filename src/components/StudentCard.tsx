@@ -3,6 +3,7 @@ import { CheckCircle2, Facebook, Crown, Shield, UserCog, ExternalLink } from "lu
 import type { Profile } from "@/lib/auth";
 import { Link } from "@/lib/navigation";
 import { setActiveCard, useActiveCard } from "@/lib/active-card";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 export const FOUNDER_ROLL = "2426006";
 /** Rolls that should always display the "CR" role label regardless of stored role. */
