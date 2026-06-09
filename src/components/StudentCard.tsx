@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckCircle2, Facebook, Crown, Shield, UserCog, ExternalLink, RotateCw } from "lucide-react";
+import { CheckCircle2, Facebook, Crown, Shield, UserCog, ExternalLink } from "lucide-react";
 import type { Profile } from "@/lib/auth";
 import { Link } from "@/lib/navigation";
 import { setActiveCard, useActiveCard } from "@/lib/active-card";
@@ -57,10 +57,10 @@ export function StudentCard({
           {/* Tap indicator */}
           <span
             aria-hidden
-            className="absolute right-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white shadow ring-1 ring-white/20 backdrop-blur"
+            className="absolute right-2 top-2 z-10 rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-bold tracking-widest text-white shadow ring-1 ring-white/20 backdrop-blur"
             title="Tap to flip"
           >
-            <RotateCw className="h-3 w-3" />
+            TAP
           </span>
           <div className="relative h-[72%] w-full overflow-hidden rounded-xl bg-muted">
             {profile.profile_photo ? (
