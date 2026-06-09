@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@/lib/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/auth";
-import { StudentCard } from "@/components/StudentCard";
+import { StudentCard, FOUNDER_ROLL } from "@/components/StudentCard";
 import { FloatingParticles } from "@/components/FloatingParticles";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
 import { DashboardHeader } from "@/components/DashboardHeader";
@@ -90,7 +90,8 @@ function StudentsPage() {
     const q = query.trim().toLowerCase();
     const out = students.filter((s) => {
       // Exclude admins from listing. CRs are part of the class — keep them visible.
-      if (roleMap[s.id] === "admin") return false;
+      // Founder is always visible regardless of stored role.
+      if (roleMap[s.id] === "admin" && s.roll !== FOUNDER_ROLL) return false;
       if (gender !== "all" && s.gender !== gender) return false;
       if (!q) return true;
       return (

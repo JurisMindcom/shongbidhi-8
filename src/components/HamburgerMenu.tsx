@@ -51,7 +51,7 @@ export function HamburgerMenu({ inline = false }: { inline?: boolean }) {
               key="panel"
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 280, damping: 32 }}
-              className="glass fixed right-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col gap-1 p-4"
+              className="fixed right-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col gap-1 border-l border-border bg-card p-4 text-card-foreground shadow-2xl"
             >
               <div className="mb-2 flex items-center justify-between">
                 <div className="text-sm font-bold text-gradient">Menu</div>

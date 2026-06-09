@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import { NavigationProvider } from "@/lib/navigation";
 import { ComposeProvider } from "@/lib/compose";
+import { PushProvider } from "@/lib/push";
 import { App } from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -13,10 +14,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <NavigationProvider>
       <ThemeProvider>
         <AuthProvider>
-          <ComposeProvider>
-            <App />
-            <Toaster theme="dark" position="top-center" richColors />
-          </ComposeProvider>
+          <PushProvider>
+            <ComposeProvider>
+              <App />
+              <Toaster theme="dark" position="top-center" richColors />
+            </ComposeProvider>
+          </PushProvider>
         </AuthProvider>
       </ThemeProvider>
     </NavigationProvider>
