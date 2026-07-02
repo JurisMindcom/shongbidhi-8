@@ -137,7 +137,7 @@ export default function Home() {
             <div className="glass rounded-2xl p-6 italic text-foreground/85 sm:p-8">
               “Our department is dedicated to nurturing future professionals, scholars, and leaders through quality
               education, ethical values, research excellence, and practical knowledge in law and land administration.”
-              <div className="mt-3 text-xs not-italic text-secondary">— Faculty Message</div>
+              <div className="mt-3 text-xs not-italic text-secondary">— Founder Message</div>
             </div>
           </Reveal>
         </div>
