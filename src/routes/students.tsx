@@ -52,7 +52,11 @@ function StudentsPage() {
           setRoleMap(m);
         });
     Promise.all([
-      supabase.from("profiles").select("*").eq("status", "active").order("roll", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("id,name,nickname,roll,session,batch,department,blood_group,district,gender,profile_photo,facebook_link,status")
+        .eq("status", "active")
+        .order("roll", { ascending: true }),
       loadRoles(),
     ]).then(([{ data: profs }]) => {
       if (!active) return;
