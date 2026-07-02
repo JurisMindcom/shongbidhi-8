@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useParam, Link } from "@/lib/navigation";
+import { createFileRoute, useParam, Link } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/auth";
@@ -84,10 +84,10 @@ export default function PublicProfilePage() {
       <DashboardHeader title="Profile" />
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
         <Link
-          to="/dashboard"
+          to={user ? "/dashboard" : "/students"}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/80 hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+          <ArrowLeft className="h-4 w-4" /> Back
         </Link>
 
         <section className="glass rounded-3xl p-6 text-center">
@@ -152,7 +152,7 @@ export default function PublicProfilePage() {
           )}
         </section>
       </main>
-      <BottomNav />
+      {user && <BottomNav />}
     </div>
   );
 }
