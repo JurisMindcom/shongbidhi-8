@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useParam, Link } from "@/lib/navigation";
+import { createFileRoute, useParam, Link } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/auth";
@@ -25,22 +25,21 @@ type Post = {
 
 export default function PublicProfilePage() {
   const roll = useParam("/u/");
-  const { user, loading } = useAuth();
-  const nav = useNavigate();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [role, setRole] = useState<"admin" | "cr" | "student">("student");
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) nav("/login");
-  }, [loading, user, nav]);
-
-  useEffect(() => {
     if (!roll) return;
     let active = true;
     (async () => {
-      const { data: p } = await supabase.from("profiles").select("*").eq("roll", roll).maybeSingle();
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("id,name,nickname,roll,session,batch,department,blood_group,district,gender,profile_photo,facebook_link,status")
+        .eq("roll", roll)
+        .maybeSingle();
       if (!active) return;
       if (!p) { setNotFound(true); return; }
       setProfile(p as Profile);
@@ -85,10 +84,10 @@ export default function PublicProfilePage() {
       <DashboardHeader title="Profile" />
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
         <Link
-          to="/dashboard"
+          to={user ? "/dashboard" : "/students"}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/80 hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+          <ArrowLeft className="h-4 w-4" /> Back
         </Link>
 
         <section className="glass rounded-3xl p-6 text-center">
@@ -153,7 +152,7 @@ export default function PublicProfilePage() {
           )}
         </section>
       </main>
-      <BottomNav />
+      {user && <BottomNav />}
     </div>
   );
 }
