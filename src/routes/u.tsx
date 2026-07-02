@@ -25,22 +25,21 @@ type Post = {
 
 export default function PublicProfilePage() {
   const roll = useParam("/u/");
-  const { user, loading } = useAuth();
-  const nav = useNavigate();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [role, setRole] = useState<"admin" | "cr" | "student">("student");
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) nav("/login");
-  }, [loading, user, nav]);
-
-  useEffect(() => {
     if (!roll) return;
     let active = true;
     (async () => {
-      const { data: p } = await supabase.from("profiles").select("*").eq("roll", roll).maybeSingle();
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("id,name,nickname,roll,session,batch,department,blood_group,district,gender,profile_photo,facebook_link,status")
+        .eq("roll", roll)
+        .maybeSingle();
       if (!active) return;
       if (!p) { setNotFound(true); return; }
       setProfile(p as Profile);
