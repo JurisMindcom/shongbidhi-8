@@ -75,7 +75,11 @@ function StudentsPage() {
           if (next.status !== "active") return prev.filter((p) => p.id !== next.id);
           const exists = prev.some((p) => p.id === next.id);
           const merged = exists ? prev.map((p) => (p.id === next.id ? next : p)) : [...prev, next];
-          return merged.sort((a, b) => a.roll.localeCompare(b.roll));
+          const gr = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
+          return merged.sort((a, b) => {
+            const gd = gr(a.gender) - gr(b.gender);
+            return gd !== 0 ? gd : a.roll.localeCompare(b.roll);
+          });
         });
       })
       .subscribe();
