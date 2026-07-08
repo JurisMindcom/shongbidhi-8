@@ -111,7 +111,11 @@ export default function AdminPage() {
           const next = payload.new as Profile;
           const exists = prev.some((p) => p.id === next.id);
           const merged = exists ? prev.map((p) => (p.id === next.id ? next : p)) : [...prev, next];
-          return merged.sort((a, b) => a.roll.localeCompare(b.roll));
+          const gr = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
+          return merged.sort((a, b) => {
+            const gd = gr(a.gender) - gr(b.gender);
+            return gd !== 0 ? gd : a.roll.localeCompare(b.roll);
+          });
         });
       })
       .subscribe();
@@ -196,11 +200,17 @@ export default function AdminPage() {
     }
   };
 
-  const filtered = students.filter((s) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
-  });
+  const filtered = students
+    .filter((s) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      const gr = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
+      const gd = gr(a.gender) - gr(b.gender);
+      return gd !== 0 ? gd : a.roll.localeCompare(b.roll);
+    });
 
   if (!canAccess) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
 
