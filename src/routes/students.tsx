@@ -76,11 +76,7 @@ function StudentsPage() {
           if (next.status !== "active") return prev.filter((p) => p.id !== next.id);
           const exists = prev.some((p) => p.id === next.id);
           const merged = exists ? prev.map((p) => (p.id === next.id ? next : p)) : [...prev, next];
-          const gr = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
-          return merged.sort((a, b) => {
-            const gd = gr(a.gender) - gr(b.gender);
-            return gd !== 0 ? gd : a.roll.localeCompare(b.roll);
-          });
+          return merged.sort((a, b) => compareStudents(a, b));
         });
       })
       .subscribe();
@@ -110,12 +106,7 @@ function StudentsPage() {
         (s.batch ?? "").toLowerCase().includes(q)
       );
     });
-    const genderRank = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
-    out.sort((a, b) => {
-      const gd = genderRank(a.gender) - genderRank(b.gender);
-      if (gd !== 0) return gd;
-      return sort === "name" ? a.name.localeCompare(b.name) : a.roll.localeCompare(b.roll);
-    });
+    out.sort((a, b) => compareStudents(a, b, sort));
     return out;
   }, [students, query, gender, sort, roleMap]);
 
