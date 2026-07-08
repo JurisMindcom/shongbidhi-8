@@ -105,9 +105,12 @@ function StudentsPage() {
         (s.batch ?? "").toLowerCase().includes(q)
       );
     });
-    out.sort((a, b) =>
-      sort === "name" ? a.name.localeCompare(b.name) : a.roll.localeCompare(b.roll),
-    );
+    const genderRank = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
+    out.sort((a, b) => {
+      const gd = genderRank(a.gender) - genderRank(b.gender);
+      if (gd !== 0) return gd;
+      return sort === "name" ? a.name.localeCompare(b.name) : a.roll.localeCompare(b.roll);
+    });
     return out;
   }, [students, query, gender, sort, roleMap]);
 
