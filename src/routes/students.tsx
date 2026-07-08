@@ -61,7 +61,7 @@ function StudentsPage() {
       loadRoles(),
     ]).then(([{ data: profs }]) => {
       if (!active) return;
-      setStudents((profs as Profile[]) ?? []);
+      setStudents(((profs as Profile[]) ?? []).slice().sort((a, b) => compareStudents(a, b)));
       setLoading(false);
     });
 
