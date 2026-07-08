@@ -12,6 +12,7 @@ import {
   Pencil, Pause, Play, Search,
 } from "lucide-react";
 import type { Profile } from "@/lib/auth";
+import { compareStudents } from "@/lib/sort-students";
 
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 
@@ -99,7 +100,7 @@ export default function AdminPage() {
     if (!canAccess) return;
     let active = true;
     supabase.from("profiles").select("*").order("roll").then(({ data }) => {
-      if (active) setStudents((data as Profile[]) ?? []);
+      if (active) setStudents(((data as Profile[]) ?? []).slice().sort((a, b) => compareStudents(a, b)));
     });
     const channel = supabase
       .channel("profiles-admin")
@@ -111,11 +112,7 @@ export default function AdminPage() {
           const next = payload.new as Profile;
           const exists = prev.some((p) => p.id === next.id);
           const merged = exists ? prev.map((p) => (p.id === next.id ? next : p)) : [...prev, next];
-          const gr = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
-          return merged.sort((a, b) => {
-            const gd = gr(a.gender) - gr(b.gender);
-            return gd !== 0 ? gd : a.roll.localeCompare(b.roll);
-          });
+          return merged.sort((a, b) => compareStudents(a, b));
         });
       })
       .subscribe();
@@ -206,11 +203,7 @@ export default function AdminPage() {
       if (!q) return true;
       return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
     })
-    .sort((a, b) => {
-      const gr = (g?: string | null) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
-      const gd = gr(a.gender) - gr(b.gender);
-      return gd !== 0 ? gd : a.roll.localeCompare(b.roll);
-    });
+    .sort((a, b) => compareStudents(a, b));
 
   if (!canAccess) return <div className="grid min-h-screen place-items-center text-foreground/70">Loading…</div>;
 
