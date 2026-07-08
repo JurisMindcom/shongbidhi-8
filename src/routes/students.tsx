@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/auth";
 import { StudentCard, FOUNDER_ROLL } from "@/components/StudentCard";
+import { compareStudents } from "@/lib/sort-students";
 import { FloatingParticles } from "@/components/FloatingParticles";
 import { HamburgerMenu } from "@/components/HamburgerMenu";
 import { DashboardHeader } from "@/components/DashboardHeader";
