@@ -190,8 +190,13 @@ function StudentsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {visible.map((s) => (
-              <StudentCard key={s.id} profile={s} role={roleMap[s.id] ?? "student"} />
+            {visible.map((s, i) => (
+              <StudentCard
+                key={s.id}
+                profile={s}
+                role={roleMap[s.id] ?? "student"}
+                priority={i < 10}
+              />
             ))}
           </div>
         )}
