@@ -4,6 +4,7 @@ import type { Profile } from "@/lib/auth";
 import { Link } from "@/lib/navigation";
 import { setActiveCard, useActiveCard } from "@/lib/active-card";
 import { safeHttpUrl } from "@/lib/safe-url";
+import { SmartImage } from "@/components/SmartImage";
 
 export const FOUNDER_ROLL = "2426006";
 /** Rolls that should always display the "CR" role label regardless of stored role. */
@@ -23,11 +24,14 @@ export const displayRole = (
 export function StudentCard({
   profile,
   role: baseRole,
+  priority = false,
 }: {
   profile: Profile;
   /** @deprecated serial numbering removed */
   serial?: number;
   role?: "admin" | "cr" | "student";
+  /** Above-the-fold cards preload their image with high fetch priority. */
+  priority?: boolean;
 }) {
   const { activeId } = useActiveCard();
   const flipped = activeId === profile.id;
@@ -64,13 +68,17 @@ export function StudentCard({
             TAP
           </span>
           <div className="relative h-[72%] w-full overflow-hidden rounded-xl bg-muted">
-            {profile.profile_photo ? (
-              <img src={profile.profile_photo} alt={profile.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-secondary">
-                {profile.name?.[0] ?? "?"}
-              </div>
-            )}
+            <SmartImage
+              src={profile.profile_photo}
+              alt={profile.name}
+              priority={priority}
+              className="absolute inset-0 h-full w-full object-cover"
+              fallback={
+                <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-secondary">
+                  {profile.name?.[0] ?? "?"}
+                </div>
+              }
+            />
           </div>
           <span className={badgeClass}>
             {RoleIcon && <RoleIcon className="h-3 w-3" />} {role}
